@@ -8,6 +8,7 @@ thk=$WAIS/targ/supl/modl-beijing_normal_university/wolovick-2021a/Icethick.grd
 bed=$WAIS/targ/supl/modl-beijing_normal_university/wolovick-2021a/BedElev.grd
 
 data=$WAIS/targ/comm/DATA-OPR/projected_images_COLDEX
+bnd=$WAIS/targ/supl/xtra-coldex/mek_transition_zone/clipped_bnd.gmt
 
 TARG=`pwd | sed s@code@targ@`
 mkdir -p $TARG
@@ -15,10 +16,10 @@ srf=$TARG/../srfelv/srfelv.xyz_val.grd
 
 WIDTH=8c
 
-X_W=200
-X_E=325
-Y_N=150
-Y_S=25
+X_W=175
+X_E=375
+Y_N=175
+Y_S=-25
 
 X_W_M=${X_W}000
 X_E_M=${X_E}000
@@ -41,46 +42,33 @@ REGION_GEO="-R${LON_1}/${LAT_1}/${LAT_2}/${LON_2}r"
 REGION_KM=-R${X_W}/${X_E}/${Y_S}/${Y_N}
 REGION_M=-R${X_W_M}/${X_E_M}/${Y_S_M}/${Y_N_M}
 
-gmt makecpt -Cmagma -Z -T-1000/0/100 > dem.cpt
+gmt makecpt -Cglobe -Z -T-1000/1000/100 -M --COLOR_NAN=gray > dem.cpt
 gmt makecpt -Cviridis -Z -T0/40/2 > dev400.cpt
 gmt makecpt -Cocean -Z -T0/25/2 > basal.cpt
 gmt makecpt -T-0.001/0.005/0.0001 -Cocean -I > srfgrad.cpt 
 
-out=$TARG/fig2.ps
+out=$TARG/coldex_south_pole_basin_maps
 
 function profiles () {
     cat $TARG/../cuestas/CLX_R66a.xy \
         | awk '{print $1/1000, $2/1000}' \
-        | gmt psxy -JX -R -W2p,blue -t50 \
-        -O -K >> ${out}.ps
+        | gmt psxy -W2p,blue -t50
 
     for cuesta in $TARG/../cuestas/CLX_R*.cuesta.xy
     do
     cat $cuesta \
             | awk '{print $1/1000, $2/1000}' \
-            | gmt psxy -JX -R -W2p,0/191/255 \
-            -O -K >> ${out}.ps
+            | gmt psxy -W2p,white
     done
 }
 
 #Surface
-
 gmt grdgradient $srf -D -S$TARG/srfgrad.grd -G$TARG/srfslopedirection.grd
 
-
-gmt grdimage $TARG/srfgrad.grd -JX$WIDTH/0 -Csrfgrad.cpt $REGION_M \
-             -K > ${out}.ps
-
-
-gmt grdcontour $srf -JX$WIDTH/0 -C5 -Wc0.25p,white -Wa0.5p,white -A25+f6p -T $REGION_M \
-             -K -O >> ${out}.ps
-
 rm $TARG/hi_pass_bed.xyz
-
 for pst in `make_pst_list CLX | grep MKB | grep '/R'`
 do
 
-echo $pst
 echo ">" >> $TARG/hi_pass_bed.xyz
 zpeony -2xy -pps71s < $WAIS/targ/tpro/$pst/opr_foc1_bedelv/ztim_llz_bedelv.bin \
        | zvert \
@@ -90,64 +78,63 @@ zpeony -2xy -pps71s < $WAIS/targ/tpro/$pst/opr_foc1_bedelv/ztim_llz_bedelv.bin \
        >> $TARG/hi_pass_bed.xyz
 done
 
+gmt begin $out png 
+    gmt subplot begin 1x2 -Fs$WIDTH $REGION_M -JX$WIDTH/0 -M0c
+        gmt subplot set
+            gmt grdimage $TARG/srfgrad.grd -Bbtlr -Csrfgrad.cpt
+            gmt grdcontour $srf -C5 -Wc0.25p,white -Wa0.5p,white -A25+f6p -T 
 
-gmt psscale -Csrfgrad.cpt \
-                -DJTC \
-                $REGION_M -JX -Bxa -By+l"grad" \
-             -K -O >> ${out}.ps
+            gmt plot $bnd -W3p,black -t50
 
-        #-Bxa+l"Eastings (km)" -Bya+l"Northings (km)" \
-gmt psbasemap -JX$WIDTH/0 \
-             -Bxf -Byf \
-             -BWSne $REGION_KM \
-             -O -K >> ${out}.ps
+            gmt colorbar -Csrfgrad.cpt \
+                        -DJTC+o0/0.5c \
+                        -Bxa -By+l"grad"
 
-profiles
+            gmt basemap -Bxfa -Byfa -BwSne $REGION_KM
 
-cat $TARG/hi_pass_bed.xyz \
-       | pswiggle -JX$WIDTH/0 $REGION_M -Z1000 -S275e3/40e3/250/m -G-black -G+black -O -K >> ${out}.ps
+            profiles
 
-gmt pstext -JX$WIDTH/0 $REGION_KM -F+f8p+jLT -D0.2c/-0.2c -O -K -TO -W -Gwhite << EOF >> ${out}.ps
+            cat $TARG/hi_pass_bed.xyz \
+               | gmt wiggle $REGION_M -Z1000 -DjBR+o0.25c/0.25c+w250+lm -Gyellow+p -F+gwhite --FONT_ANNOT_PRIMARY=8p 
+
+            gmt text $REGION_KM -F+f8p+jLT -D0.2c/-0.2c -W -Gwhite <<- EOF
 ${X_W} ${Y_N} (a) Surface gradient and elevation contours
 EOF
 
-#BEDELV
-echo doing bedelv
-gmt grdimage $TARG/bedelv.xyz_val.grd -JX$WIDTH/0 -I -Cdem.cpt $REGION_M \
-             -X$WIDTH \
-             -K -O >> ${out}.ps
+        #BEDELV
+        echo doing bedelv
+        gmt subplot set
+        gmt grdimage $TARG/bedelv.xyz_val.grd -Bbtlr -I -Cdem.cpt $REGION_M
+        gmt grdcontour $TARG/bedelv.xyz_val.grd -C200 -Wa0.5p -Wc0.1p -A600+f6p -T 
+        gmt grdcontour $srf -C5 -Wc0.25p,white -Wa0.5p,white -T -A25+f6p 
+        gmt plot $bnd -W3p,black -t50
 
-gmt grdcontour $TARG/bedelv.xyz_val.grd -JX$WIDTH/0 -C200 -A600+f6p -T $REGION_M \
-             -K -O >> ${out}.ps
+        gmt basemap -JX$WIDTH/0 \
+                     -Bxfa -Byfa \
+                     -BWeSn $REGION_KM
+        profiles
 
-gmt grdcontour $srf -JX$WIDTH/0 -C5 -Wc0.25p,white -Wa0.5p,white -T -A25+f6p $REGION_M \
-             -K -O >> ${out}.ps
+        cat $TARG/hi_pass_bed.xyz \
+               | gmt wiggle $REGION_M -Z1000 -Gyellow+p 
 
-gmt psbasemap -JS0/-90/$WIDTH \
-             -Bxf -Byf \
-             -Lx6c/1c+c-71+w50k+f+l \
-             -BESnw $REGION_GEO \
-             -O -K >> ${out}.ps
-
-gmt psbasemap -JX$WIDTH/0 \
-             -Bxf -Byf \
-             -BWSne $REGION_KM \
-             -O -K >> ${out}.ps
-profiles
-
-cat $TARG/hi_pass_bed.xyz \
-       | pswiggle -JX$WIDTH/0 $REGION_M -Z1000 -G-black -G+black -O -K >> ${out}.ps
-
-
-gmt pstext -JX$WIDTH/0 $REGION_KM -F+f8p+jLT -D0.2c/-0.2c -O -K -TO -W -Gwhite << EOF >> ${out}.ps
+        gmt text -JX$WIDTH/0 $REGION_KM -F+f8p+jLT -D0.2c/-0.2c -W -Gwhite <<- EOF 
 ${X_W} ${Y_N} (b) Bed elevation grid
 EOF
+    gmt colorbar -Cdem.cpt \
+                        -DJTC+o0/0.5c \
+                        -Bxa -By+l"m" \
 
-gmt psscale -Cdem.cpt \
-                -DJTC \
-                $REGION_M -JX$WIDTH/0 -Bxa -By+l"m" \
-                -O >> ${out}.ps
+       gmt subplot end
 
-gmt psconvert ${out}.ps  -Tf -P -A
 
-rm -fr ${out}.ps
+gmt legend -DJBC+w17c+o0/1c -F+glightgray --FONT_ANNOT_PRIMARY=6p <<- EOF
+H 6p,Helvetica-Bold LEGEND (Map coordinates in EPGS:3031 km)
+N 4
+S - - 0.5c - 2p,blue - CLX/MKB2o/R66a (Fig. 1) 
+S - - 0.5c - 2p,white - Cuesta profiles (Fig. 3) 
+S - t 0.25c yellow - - High pass postive bed topography 
+S - - 0.5c - 3p,dimgray - Mapped dichotomy
+EOF
+
+    gmt end
+
