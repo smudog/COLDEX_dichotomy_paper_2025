@@ -3,6 +3,7 @@
 srf=$WAIS/targ/supl/grid-icesat2/Smith2020/ais_grounded.grd
 srf=$WAIS/targ/supl/grid-ntpdc_cn/Shen22/Antarctic_DEM_from_ICESat-2.grd
 srf=$WAIS/targ/supl/grid-pgc/rema/1km/REMA_1km_dem_filled.grd
+srf=$WAIS/orig/supl/grid-pgc/rema/1km/rema_mosaic_1km_v2.0_filled_cop30_dem.tif
 
 thk=$WAIS/targ/supl/modl-beijing_normal_university/wolovick-2021a/Icethick.grd
 bed=$WAIS/targ/supl/modl-beijing_normal_university/wolovick-2021a/BedElev.grd
@@ -11,7 +12,9 @@ data=$WAIS/targ/comm/DATA-OPR/projected_images_COLDEX
 
 TARG=`pwd | sed s@code@targ@`
 mkdir -p $TARG
-srf=$TARG/../srfelv/srfelv.xyz_val.grd
+#srf=$TARG/../srfelv/srfelv.xyz_val.grd
+
+trap 'echo ERROR $0 at $LINENO; exit' ERR
 
 WIDTH=8c
 
@@ -187,15 +190,15 @@ then
 #FRACTIONAL ICE
 gmt grdinfo $TARG/fract_basal_ice.grd
 
-gmt grdmath $TARG/fract_basal_ice.grd $TARG/icethk.xyz_val.grd MUL $TARG/bedelv.xyz_val.grd ADD = $TARG/basal_elv.grd 
+#gmt grdmath $TARG/fract_basal_ice.grd $TARG/icethk.xyz_val.grd MUL $TARG/bedelv.xyz_val.grd ADD = $TARG/basal_elv.grd 
 
-gmt grdmath $TARG/fract_basal_ice.grd $TARG/icethk.xyz_val.grd MUL $TARG/bedelv.xyz_val.grd ADD = $TARG/basal_elv.grd 
+#gmt grdmath $TARG/fract_basal_ice.grd $TARG/icethk.xyz_val.grd MUL $TARG/bedelv.xyz_val.grd ADD = $TARG/basal_elv.grd 
 
 gmt grdmath $TARG/fract_basal_ice.grd 100 MUL = $TARG/fract_basal_ice.percent.grd
 
-gmt grdmath $WAIS/targ/supl/modl-beijing_normal_university/wolovick-2021a/EchoFreeZone.grd 100 MUL = $TARG/wolovick21.grd
+#gmt grdmath $WAIS/targ/supl/modl-beijing_normal_university/wolovick-2021a/EchoFreeZone.grd 100 MUL = $TARG/wolovick21.grd
 
-gmt grdmath $WAIS/targ/supl/modl-beijing_normal_university/wolovick-2021a/EchoFreeZone.grd $thk MUL $bed ADD = $TARG/wolovick_basal_elv.grd
+#gmt grdmath $WAIS/targ/supl/modl-beijing_normal_university/wolovick-2021a/EchoFreeZone.grd $thk MUL $bed ADD = $TARG/wolovick_basal_elv.grd
 
 
 
@@ -206,7 +209,7 @@ gmt grdimage $TARG/fract_basal_ice.percent.grd -JX$WIDTH/0 -Q -Cbasal.cpt $REGIO
              -X$WIDTH \
              -K -O >> ${out}.ps
 
-gmt grdcontour $WAIS/targ/supl/modl-beijing_normal_university/wolovick-2021a/FreezeOnThick.grd -JX$WIDTH/0 $REGION_M -C10 -Wc0.5p,black -O -K >> ${out}.ps
+#gmt grdcontour $WAIS/targ/supl/modl-beijing_normal_university/wolovick-2021a/FreezeOnThick.grd -JX$WIDTH/0 $REGION_M -C10 -Wc0.5p,black -O -K >> ${out}.ps
              
 gmt psscale -Cbasal.cpt -DJBC $REGION_M -JX -Bxa -By+l"m" \
              -K -O >> ${out}.ps
@@ -214,12 +217,12 @@ gmt psscale -Cbasal.cpt -DJBC $REGION_M -JX -Bxa -By+l"m" \
 
 else
 
-gmt grdimage $TARG/wolovick_basal_elv.grd -I -JX$WIDTH/0 -Cdem.cpt $REGION_M \
-             -X$WIDTH \
-             -K -O >> ${out}.ps
+#gmt grdimage $TARG/wolovick_basal_elv.grd -I -JX$WIDTH/0 -Cdem.cpt $REGION_M \
+#             -X$WIDTH \
+#             -K -O >> ${out}.ps
 
-gmt grdimage $TARG/basal_elv.grd -I -JX$WIDTH/0 -Q -Cdem.cpt $REGION_M \
-             -K -O >> ${out}.ps
+#gmt grdimage $TARG/basal_elv.grd -I -JX$WIDTH/0 -Q -Cdem.cpt $REGION_M \
+#             -K -O >> ${out}.ps
 
 gmt psscale -Cdem.cpt -DJBC $REGION_M -JX -Bxa -By+l"m" \
              -K -O >> ${out}.ps
