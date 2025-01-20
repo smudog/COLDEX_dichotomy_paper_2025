@@ -9,7 +9,11 @@ Image.MAX_IMAGE_PIXELS = None
 import pandas as pd
 import matplotlib.patches as patches
 from matplotlib import pyplot as plt
+from netCDF4 import Dataset
 
+def read_nc(path,pst):
+    delay_doppler = Dataset(os.path.join(path,f'{pst.replace("/","_")}_dd_analysis.nc'),'r',format="NETCDF4")
+    return delay_doppler
 
 def read_data(path,pst):
     file_path = os.path.join(path,'image',pst.replace('/','_') + '_image.jpg')
@@ -62,14 +66,18 @@ def set_axis_color(ax, color):
     ax.yaxis.label.set_color(color)
     ax.title.set_color(color)
 
-def plot_data(radar,meta,pst):
+def plot_data(radar,dd,meta,pst):
     image_top = meta['Elevation of image top [m]'].iloc[0]
     image_bottom = meta['Elevation of image bottom [m]'].iloc[-1]
     image_start = meta['Displayed_distance [km]'].iloc[0]
     image_end = meta['Displayed_distance [km]'].iloc[-1]
 
     #fig,axes = plt.subplots(2,figsize=(7.48, 5))
-    fig,axes = plt.subplots(2,figsize=(9, 5))
+    fig,axes = plt.subplots(3,figsize=(7, 5))
+
+    print(dd['channels'])
+    dd_data = dd['channels']['normalized_max_in_bin'][:,:,:]
+    dd_x = dd_data.shape[0]
 
     outfile = pd.DataFrame()
 
@@ -77,7 +85,7 @@ def plot_data(radar,meta,pst):
     outfile['y'] = meta['EPSG 3031 Northing [m]'][::10]
 
     extent = (image_start,image_end,image_bottom,image_top)
-    axes[0].imshow(radar, cmap='bone_r', vmin=-130,vmax=-60, extent=extent, aspect='auto')
+    axes[0].imshow(radar, cmap='bone', vmin=-130,vmax=-60, extent=extent, aspect='auto')
     axes[0].set_title(f"a) MARFA radargram from radial survey line {pst}", horizontalalignment='left', x=-0)
     axes[0].set_ylim(-1100,3800)
     axes[0].set_ylabel('Elevation (m, WGS-84)')
@@ -89,24 +97,36 @@ def plot_data(radar,meta,pst):
     zoom_x2 = 475
     zoom_y1 = 0
     zoom_y2 = 1500
+
+    delay_dopp_x1 = 400
+    delay_dopp_x2 = 475
+    delay_dopp_y1 = 31.5
+    delay_dopp_y2 = 49
+
     rect1 = patches.Rectangle((zoom_x1, zoom_y1), (zoom_x2-zoom_x1), (zoom_y2-zoom_y1), linewidth=1, edgecolor='gold', facecolor='none')
     rect2 = patches.Rectangle((zoom_x1, zoom_y1), (zoom_x2-zoom_x1), (zoom_y2-zoom_y1), linewidth=5, edgecolor='gold', facecolor='none',zorder=10)
+    rect3 = patches.Rectangle((delay_dopp_x1, delay_dopp_y1), (delay_dopp_x2-delay_dopp_x1), (delay_dopp_y2-delay_dopp_y1), linewidth=1, edgecolor='gold', facecolor='none')
 
     axes[0].add_patch(rect1)
 
-    axes[1].imshow(radar, cmap='bone_r', vmin=-130,vmax=-60, extent=extent, aspect='auto')
+    axes[2].imshow(np.fliplr(np.rot90(dd_data,3)),extent=(image_start,image_start+dd_x,64,0),aspect='auto')
+    axes[2].set_title(f"c) Delay Doppler analysis - blue is more specular", horizontalalignment='left', x=-0)
+    axes[2].set_ylabel("Delay (microsec)")
+    axes[2].add_patch(rect3)
+
+    axes[1].imshow(radar, cmap='bone', vmin=-130,vmax=-60, extent=extent, aspect='auto')
     axes[1].set_xlim(zoom_x1,zoom_x2)
     axes[1].set_ylim(zoom_y1,zoom_y2)
-    axes[1].text(430,500,"basal unit",color='black')
-    axes[1].text(433,1300,"stratigraphic ice",color='black')
-    axes[1].text(415,200,"bedrock",color='black')
+    axes[1].text(430,500,"basal unit",color='ivory')
+    axes[1].text(433,1300,"stratigraphic ice",color='ivory')
+    axes[1].text(415,200,"bedrock",color='ivory')
     axes[0].set_ylabel('Elevation (m, WGS-84)')
     axes[1].add_patch(rect2)
     axes[1].set_title(f"b) Zoom in on basal region of ice sheet", horizontalalignment='left', x=-0)
     for spine in axes[1].spines.values():
             spine.set_zorder(5)
 
-    axes[1].set_xlabel('Distance from radial origin (km)')
+    axes[2].set_xlabel('Distance from radial origin (km)')
 
     plt.tight_layout()
 
@@ -121,19 +141,21 @@ def plot_data(radar,meta,pst):
             transform=axes[1].transAxes,
             fontsize=6, color='gray')
 
-    set_axis_color(axes[0], 'ivory')
-    set_axis_color(axes[1], 'ivory')
+    #set_axis_color(axes[0], 'black')
+    #set_axis_color(axes[2], 'black')
 
     outdir = os.getcwd().replace('code','targ')
     os.makedirs(outdir,exist_ok=True)
-    plt.savefig(f'{outdir}/{pst.replace("/","_")}.png',dpi=400,transparent=True)
+    plt.savefig(f'{outdir}/{pst.replace("/","_")}.png',dpi=400,transparent=False)
 
     outfile.to_csv(f'{outdir}/{pst.replace("/","_")}.xy',sep='\t',index=False,header=False,na_rep="nan")
 
 pst = 'CLX/R66a'
+pst_long = 'CLX/MKB2o/R66a'
 
 radar,meta = read_data('/disk/kea/WAIS/targ/comm/DATA-OPR/projected_images_COLDEX',pst)
+dd = read_nc('/disk/kea/WAIS/targ/artl/coldex_basal_grl24/delay_doppler/HiCARS_delay_doppler',pst_long)
 
-plot_data(radar,meta,pst)
+plot_data(radar,dd,meta,pst)
 #for column in list(meta.columns):
 #    print(column)
