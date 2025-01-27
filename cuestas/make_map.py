@@ -23,7 +23,6 @@ def read_radargram(path,transect):
     print(img)
     radar=140*(img.astype('float')-255)/256
     nrows, ncols = radar.shape
-    z = radar.flatten
 
 
     metadata_path=os.path.join(path,'image',f'{transect.replace("/","_")}_image.csv')
@@ -34,14 +33,17 @@ def read_radargram(path,transect):
     y1=metadata['Elevation of image top [m]'].iloc[0]
     region=[x0,x1,y0,y1]
 
+    x_spacing = abs((x1 - x0)/ncols)
+    y_spacing = abs((y1 - y0)/nrows)
+
     x_vals = np.linspace(x0, x1, ncols)
-    y_vals = np.linspace(y0, y1, nrows)
+    y_vals = np.linspace(y1, y0, nrows)
 
     X, Y = np.meshgrid(x_vals, y_vals)
 
     xyz_table = np.column_stack((X.ravel(), Y.ravel(), radar.ravel()))
 
-    radar_grd = pygmt.xyz2grd(xyz_table,region=region)
+    radar_grd = pygmt.xyz2grd(xyz_table,region=region,spacing=f'{x_spacing}/{y_spacing}')
     return radar_grd, region
 
 def read_psts(path=os.path.join(WAIS,'targ/comm/DATA-OPR/projected_images_COLDEX/metadata')):
@@ -64,6 +66,9 @@ def plot_transect(fig,transect,geo=False,pen='0.5,dimgray'):
     return fig
 
 def plot(targ=os.getcwd().replace('code','targ')):
+
+    focus_line='CLX/R66a'
+
     os.makedirs(targ,exist_ok=True)
 
     x1 = -150e3
@@ -89,17 +94,14 @@ def plot(targ=os.getcwd().replace('code','targ')):
 
     pygmt.config(MAP_FRAME_TYPE='plain',FONT_ANNOT_PRIMARY='8p')
     fig = pygmt.Figure()
-    pygmt.makecpt(cmap="oslo", series=[0, 4000])
-    #fig.grdimage(raster, projection="X2.5i/0",region=region,shading="+d") 
-    #fig.shift_origin(xshift="2.5i",yshift='1i')
     fig.basemap(frame='btlr+gsnow',region=region_km,projection="X2.5i/0")
-    fig.grdcontour(grid=raster,region=region,projection="X2.5i/0",annotation=100,levels=10,pen='0.25p,gray')
+    fig.grdcontour(grid=raster,region=region,projection="X2.5i/0",annotation=500,levels=50,pen=['c0.25p,gray','a0.5p,gray'])
     for transect in transects.keys():
         x = transects[transect]['EPSG 3031 Easting [m]']
         y = transects[transect]['EPSG 3031 Northing [m]']
         fig.plot(x=x,y=y,pen='0.5p,dimgray')
 
-    fig.plot(x=transects['CLX/R66a']['EPSG 3031 Easting [m]'],y=transects['CLX/R66a']['EPSG 3031 Northing [m]'],pen='0.5p,blue')
+    fig.plot(x=transects[focus_line]['EPSG 3031 Easting [m]'],y=transects['CLX/R66a']['EPSG 3031 Northing [m]'],pen='0.5p,blue')
     fig.basemap(frame=['af','wsNE'],region=region_km)
  
     fig.shift_origin(xshift="-1.75i",yshift='-0.15i')
@@ -122,14 +124,27 @@ def plot(targ=os.getcwd().replace('code','targ')):
 
     data,bounds=read_radargram(os.path.join(WAIS,'targ/comm/DATA-OPR/projected_images_COLDEX'),'CLX/R66a')
 
-    fig.shift_origin(yshift='-2i')
-    fig.basemap(region=bounds,frame=['af','WSne'],projection='X-5i/1i')
-    fig.grdimage(data,cmap='bone')
+    x0=bounds[0]
+    x1=bounds[1]
 
+    z0=-1000
+    z1=3650
 
+    height=1
+    width=-4
 
+    z = z1-z0
+    x = 1000*(x1-x0)
 
-    fig.savefig(os.path.join(targ,'test.png'))
+    aspect = abs(height/z)/abs(width/x)
+
+    fig.shift_origin(xshift='0.25i',yshift='-1.1i')
+    fig.basemap(region=[bounds[0],bounds[1],z0,z1],frame=['af','WSne'],projection=f'X{width}i/{height}i')
+    pygmt.makecpt(cmap='gray',series='-130/-50/5',continuous=True)
+    fig.grdimage(data)
+    fig.text(position='TL',text=f'Transect {focus_line}',justify='TL',font='8p,white',offset='J0.1c')
+    fig.text(position='BR',text=f'{aspect:.1f}x vertical exageration',justify='BR',font='8p,gray',offset='J0.1c')
+    fig.savefig(os.path.join(targ,'test.png'),dpi=300)
 
 plot()
 
