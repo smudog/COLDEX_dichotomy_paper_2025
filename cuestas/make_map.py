@@ -92,7 +92,7 @@ def plot(targ=os.getcwd().replace('code','targ')):
     #            resolution="30m",
     #        )
 
-    pygmt.config(MAP_FRAME_TYPE='plain',FONT_ANNOT_PRIMARY='8p')
+    pygmt.config(MAP_FRAME_TYPE='plain',FONT_ANNOT_PRIMARY='8p',FONT_LABEL='8p')
     fig = pygmt.Figure()
     fig.basemap(frame='btlr+gsnow',region=region_km,projection="X2.5i/0")
     fig.grdcontour(grid=raster,region=region,projection="X2.5i/0",annotation=500,levels=50,pen=['c0.25p,gray','a0.5p,gray'])
@@ -102,7 +102,8 @@ def plot(targ=os.getcwd().replace('code','targ')):
         fig.plot(x=x,y=y,pen='0.5p,dimgray')
 
     fig.plot(x=transects[focus_line]['EPSG 3031 Easting [m]'],y=transects['CLX/R66a']['EPSG 3031 Northing [m]'],pen='0.5p,blue')
-    fig.basemap(frame=['af','wsNE'],region=region_km)
+    fig.plot(x=transects[focus_line]['EPSG 3031 Easting [m]'].iloc[0],y=transects['CLX/R66a']['EPSG 3031 Northing [m]'].iloc[0],style='c0.1c',fill='blue')
+    fig.basemap(frame=['af','wsNE','x+lEasting (km)','y+lNorthing (km)'],region=region_km)
  
     fig.shift_origin(xshift="-1.75i",yshift='-0.15i')
     fig.basemap(
@@ -115,8 +116,9 @@ def plot(targ=os.getcwd().replace('code','targ')):
     for transect in transects.keys():
         x = transects[transect]['Longitude [degrees]']
         y = transects[transect]['Latitude [degrees]']
-        fig.plot(x=x,y=y,pen='0.25p,dimgray')
-    
+        fig.plot(x=x,y=y,pen='0.1p,dimgray')
+    fig.plot(x=transects[focus_line]['Longitude [degrees]'],y=transects['CLX/R66a']['Latitude [degrees]'],pen='0.25p,blue')
+
     fig.text(x=123.33,y=-75.1,text='Dome C',justify='BL',font='8p',D='J0.1c+v')
     fig.text(x=77.33,y=-80.33,text='Dome A',justify='BL',font='8p',D='J0.1c+v')
     fig.text(x=0,y=-90,text='South Pole',justify='BR',font='8p',D='J0.1c+v')
@@ -138,13 +140,19 @@ def plot(targ=os.getcwd().replace('code','targ')):
 
     aspect = abs(height/z)/abs(width/x)
 
-    fig.shift_origin(xshift='0.25i',yshift='-1.1i')
-    fig.basemap(region=[bounds[0],bounds[1],z0,z1],frame=['af','WSne'],projection=f'X{width}i/{height}i')
+    fig.shift_origin(xshift='0.5i',yshift='-1.1i')
+    fig.basemap(region=[bounds[0],bounds[1],z0,z1],frame=['af','WSne','x+lDistance from Dome A origin (km)','y+lWGS 84 Elevation (m)'],projection=f'X{width}i/{height}i')
     pygmt.makecpt(cmap='gray',series='-130/-50/5',continuous=True)
-    fig.grdimage(data)
+    fig.grdimage(data,dpi='i')
     fig.text(position='TL',text=f'Transect {focus_line}',justify='TL',font='8p,white',offset='J0.1c')
     fig.text(position='BR',text=f'{aspect:.1f}x vertical exageration',justify='BR',font='8p,gray',offset='J0.1c')
-    fig.savefig(os.path.join(targ,'test.png'),dpi=300)
+    fig.text(x=800,y=1000,text=f'South Pole Basin',justify='MC',font='6p,Helvetica-Bold,ivory')
+    fig.text(x=550,y=1500,text=f'Gambertsev Foothils',justify='MC',font='6p,Helvetica-Bold,ivory')
+
+    fig.shift_origin(yshift='-0.05i')
+    fig.plot(x=[x0,x1],y=[z0,z0],pen='1p,blue',no_clip=True)
+    fig.plot(x=[x0],y=[z0],style='c0.25c',fill='blue',no_clip=True)
+    fig.savefig(os.path.join(targ,'coldex_context_map.png'))
 
 plot()
 
