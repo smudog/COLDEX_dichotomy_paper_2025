@@ -18,13 +18,13 @@ DOUBLE_WIDTH=`echo $WIDTH | tr -d c | awk '{print 2*$1}'`
 
 X_W=-50
 X_E=700
-Y_N=300
 Y_S=-150
+Y_N=300
 
 X_W_M=${X_W}000
 X_E_M=${X_E}000
-Y_N_M=${Y_N}000
 Y_S_M=${Y_S}000
+Y_N_M=${Y_N}000
 
 LON_1=`echo "$X_W $Y_S" | mapproject -Fk -C -I -Js0/-90/-71/1:5000000 -R0/360/-90/-45 | awk '{print $1}'`
 LAT_1=`echo "$X_W $Y_S" | mapproject -Fk -C -I -Js0/-90/-71/1:5000000 -R0/360/-90/-45 | awk '{print $2}'`
