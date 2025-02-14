@@ -34,6 +34,8 @@ REGION_GEO="-R${LON_1}/${LAT_1}/${LAT_2}/${LON_2}r"
 REGION_KM=-R${X_W}/${X_E}/${Y_S}/${Y_N}
 REGION_M=-R${X_W_M}/${X_E_M}/${Y_S_M}/${Y_N_M}
 
+echo $REGION_GEO
+
 srf_for_slope=$TARG/../srfelv/srfelv.xyz_val.grd
 gmt grdgradient $srf_for_slope -D -S$TARG/srfgrad.grd -G$TARG/srfslopedirection.grd
 
@@ -98,7 +100,7 @@ gmt begin $out png
         gmt plot $REGION_M -W1p,yellow < spb_bounds.xy
 
         tail -n 1 spb_bounds.xy \
-            | awk '{print $1, $2, "Fig. 4"}' \
+            | awk '{print $1, $2, "Fig. S1"}' \
             | pstext -F+jTL+f6p,Helvetica-Bold,yellow -D0.1c/-0.1c
 
         gmt basemap -JS0/-90/$WIDTH -Bxg30 -Byg1 $REGION_GEO -t50
