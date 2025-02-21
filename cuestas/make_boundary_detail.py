@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 import re
 from netCDF4 import Dataset
+from h5py import File
 
 WAIS=os.environ['WAIS']
 
@@ -125,14 +126,13 @@ def get_bounds(line,length=45):
     return None, None
 
 
-def plot(targ=os.getcwd().replace('code','targ')):
-
+def plot(targ=os.getcwd().replace('code','targ'),orig=os.getcwd().replace('code','orig')):
     origin_x=964892.757
     origin_y=384953.176
 
     lines=['CLX/R68b','CLX/R69a','CLX/R70b']
 
-    flight='A10B'
+    bas_flight='A10B'
 
     os.makedirs(targ,exist_ok=True)
 
@@ -147,48 +147,25 @@ def plot(targ=os.getcwd().replace('code','targ')):
     pygmt.makecpt(cmap='gray',series='-135/-100/5',continuous=True)
 
 # Make fractional layer depth profile
-    sanderson_path = os.path.join(WAIS,'orig/supl/xtra-antarchitecture/Sanderson_2023')
+    sanderson_path = os.path.join(WAIS,orig,'Sanderson_2023')
 
-    ea_h1 = read_layer(os.path.join(sanderson_path,'EA_H1_38ka.csv'),flight=flight,origin_x=origin_x,origin_y=origin_y)
-    ea_h2 = read_layer(os.path.join(sanderson_path,'EA_H2_90ka.csv'),flight=flight,origin_x=origin_x,origin_y=origin_y)
-    ea_h3 = read_layer(os.path.join(sanderson_path,'EA_H3_162ka.csv'),flight=flight,origin_x=origin_x,origin_y=origin_y)
+    ea_h1 = read_layer(os.path.join(sanderson_path,'EA_H1_38ka.csv'),flight=bas_flight,origin_x=origin_x,origin_y=origin_y)
+    ea_h2 = read_layer(os.path.join(sanderson_path,'EA_H2_90ka.csv'),flight=bas_flight,origin_x=origin_x,origin_y=origin_y)
+    ea_h3 = read_layer(os.path.join(sanderson_path,'EA_H3_162ka.csv'),flight=bas_flight,origin_x=origin_x,origin_y=origin_y)
 
 
 # make Delay Doppler profile
     dd_transect = 'CLX/R66a'
     dd_full_transect = f'{dd_transect.split("/")[0]}_MKB2o_{dd_transect.split("/")[1]}'
-    data, bounds = read_radargram(os.path.join(WAIS,'targ/comm/DATA-OPR/projected_images_COLDEX'),dd_transect)
+    data, bounds = read_radargram(os.path.join(WAIS,orig,'projected_images_COLDEX'),dd_transect)
 
-    DelayDoppler_path=os.path.join(WAIS,'targ/xtra/CXA2/FOC/DelayDopper')
+    DelayDoppler_path=os.path.join(WAIS,orig,'DelayDopper')
     dd = read_nc(DelayDoppler_path,dd_full_transect,x0=bounds[0],x1=bounds[1])
     spec = pd.read_csv(os.path.join(DelayDoppler_path,f'{dd_full_transect}_specularity.gmt'),sep='\t')
     spec['distance'] = np.sqrt((spec['x'] - origin_x)**2 + (spec['y'] - origin_y)**2)/1000
     df = spec[['x','y','distance']]
 
-# make flux
-    velocity_path = os.path.join(WAIS,'targ/supl/grid-nsidc/Mouginot2019')
-    velocity = pygmt.grdtrack(grid=os.path.join(velocity_path,'vel.tiff'),points=df,newcolname='vel')
-    velocity_thk = pygmt.grdtrack(grid=os.path.join(targ,'icethk.xyz_val.grd'),points=velocity,newcolname='thk')
-    velocity_thk['flux'] = velocity_thk['vel'] * velocity_thk['thk']
-    window_width=10
-    velocity_thk['fflux'] = velocity_thk['flux'].rolling(window=10, center=True).mean()
-    velocity_thk['dflux'] = np.gradient(velocity_thk['flux'])/1000
-    velocity_thk['dfflux'] = np.gradient(velocity_thk['fflux'])/1000
-
-# plot flux
-    region_rad = [ 744.5, 789.5, -1000, 1000 ]
-    center = (region_rad[1] - region_rad[0])/2 + region_rad[0]
-    fig.basemap(frame=['afg','y+l∂ flux (m/yr)','WSne+ggray'],region=[center-100,center+100,-0.4,0.4],projection=f'X{width}i/{height}i')
-    fig.plot(x=velocity_thk['distance'],y=velocity_thk['dfflux'],pen='1p,yellow',gap='x1')
-
-    neg_flux = velocity_thk.loc[velocity_thk['dfflux']<0]
-
-    fig.plot(x=neg_flux['distance'],y=neg_flux['dfflux'],style='c1p',pen='1p,blue',gap='x1')
-    fig.text(position='BL',justify='BL',fill='white',pen='0.25p,black',clearance='+tO',offset='J0.1c',text=f'a) ∂ Flux along CLX/R66a',font='8p,black')
-    fig.shift_origin(yshift=f'{-(2*height+height/2)}i')
-
 # Plot fractional layer depth profile
-    #region_layers = [ 744.5, 789.5, 25, 85 ] 
     region_layers = [ 667, 867, 15, 85 ] 
     text_x = 800
 
@@ -205,7 +182,7 @@ def plot(targ=os.getcwd().replace('code','targ')):
     text_y = ea_h3[ea_h3['Distance'] < text_x]['fraction_depth'].iloc[0] * 100
     fig.text(x=text_x,y=text_y,justify='CM',fill='white',pen='0.25p,lightblue',clearance='+tO',text='H3 horizon',font='6p,lightblue')
 
-    fig.text(position='TL',justify='TL',fill='white',pen='0.25p,black',clearance='+tO',offset='J0.1c',text=f'b) AGAP Flight {flight} Horizon Fractional Depth',font='8p,black')
+    fig.text(position='TL',justify='TL',fill='white',pen='0.25p,black',clearance='+tO',offset='J0.1c',text=f'a) AGAP Flight {bas_flight} Horizon Fractional Depth',font='8p,black')
     fig.basemap(frame=['WSne','af','y+l% depth'])
 
     fig.shift_origin(yshift=f'{-(2*height+height/2)}i')
@@ -214,7 +191,7 @@ def plot(targ=os.getcwd().replace('code','targ')):
     fig.grdimage(dd,region=[740,840,30,55],projection=f'X{width}i/-{height*2}i')
     fig.plot(x=spec['distance'],y=spec['base_specular[s]']*1e6,pen='1p,white,dotted')
     fig.basemap(frame=['af','WSne','y+ldelay (µsec)'])
-    fig.text(position='TL',justify='TL',fill='white',pen='0.25p,black',clearance='+tO',offset='J0.1c',text=f'c) {dd_transect} Delay Doppler color composite',font='8p,black')
+    fig.text(position='TL',justify='TL',fill='white',pen='0.25p,black',clearance='+tO',offset='J0.1c',text=f'b) {dd_transect} Delay Doppler color composite',font='8p,black')
     fig.text(position='BL',justify='BL',offset='J0.1c',text=f',                               Mixed/Scattering',font='6p,Courier-Bold,lightgray',fill='dimgray')
     fig.text(position='BL',justify='BL',offset='J0.1c',text=f'                      From Left',font='6p,Courier-Bold,green',fill='dimgray')
     fig.text(position='BL',justify='BL',offset='J0.1c',text=f'           From Below',font='6p,Courier-Bold,blue',fill='dimgray')
@@ -224,13 +201,13 @@ def plot(targ=os.getcwd().replace('code','targ')):
 
 # plot radargrams
     for i,line in enumerate(lines):
-        labels = ['d','e','f']
+        labels = ['c','d','e']
         x0, x1 = get_bounds(line)
         region=[x0,x1,z0,z1]
 
         fig.basemap(frame=['tblr'], region=region, projection=f'X{width}i/{height}i')
 
-        data, bounds = read_radargram(os.path.join(WAIS,'targ/comm/DATA-OPR/projected_images_COLDEX'),line)
+        data, bounds = read_radargram(os.path.join(WAIS,orig,'projected_images_COLDEX'),line)
         fig.grdimage(data)
 
         z = z1 - z0
