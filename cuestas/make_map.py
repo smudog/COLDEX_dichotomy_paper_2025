@@ -65,7 +65,7 @@ def plot_transect(fig,transect,geo=False,pen='0.5,dimgray'):
     fig.plot(x=x,y=y,pen=pen)
     return fig
 
-def plot(targ=os.getcwd().replace('code','targ')):
+def plot(targ=os.getcwd().replace('code','targ'),orig=os.getcwd().replace('code','orig')):
 
     focus_line='CLX/R66a'
 
@@ -78,11 +78,11 @@ def plot(targ=os.getcwd().replace('code','targ')):
     region=f'{x1}/{x2}/{y1}/{y2}'
     region_km=f'{x1/1000}/{x2/1000}/{y1/1000}/{y2/1000}'
 
-    raster = read_grd(os.path.join(WAIS,'orig/supl/grid-pgc/rema/1km/rema_mosaic_1km_v2.0_filled_cop30_dem.tif'))
+    raster = read_grd(os.path.join(WAIS,orig,'rema_mosaic_1km_v2.0_filled_cop30_dem.tif'))
     # Replace -9999 with NaN
     raster = raster.where(raster!=-9999)
 
-    transects = read_psts()
+    transects = read_psts(os.path.join(orig,'projected_images_COLDEX','metadata'))
 
     # Plot the raster using PyGMT
     # Download grid for Earth relief with a resolution of 10 arc-minutes and
@@ -119,12 +119,12 @@ def plot(targ=os.getcwd().replace('code','targ')):
         fig.plot(x=x,y=y,pen='0.1p,dimgray')
     fig.plot(x=transects[focus_line]['Longitude [degrees]'],y=transects['CLX/R66a']['Latitude [degrees]'],pen='0.25p,blue')
 
-    fig.text(x=123.33,y=-75.1,text='Dome C',justify='BL',font='8p',D='J0.1c+v')
-    fig.text(x=77.33,y=-80.33,text='Dome A',justify='BL',font='8p',D='J0.1c+v')
-    fig.text(x=0,y=-90,text='South Pole',justify='BR',font='8p',D='J0.1c+v')
-    fig.text(x=166.67,y=-77.83,text='McMurdo',justify='TR',font='8p',D='J0.1c+v')
+    fig.text(x=123.33,y=-75.1,text='Dome C',justify='BL',font='8p',offset='J0.1c+v')
+    fig.text(x=77.33,y=-80.33,text='Dome A',justify='BL',font='8p',offset='J0.1c+v')
+    fig.text(x=0,y=-90,text='South Pole',justify='BR',font='8p',offset='J0.1c+v')
+    fig.text(x=166.67,y=-77.83,text='McMurdo',justify='TR',font='8p',offset='J0.1c+v')
 
-    data,bounds=read_radargram(os.path.join(WAIS,'targ/comm/DATA-OPR/projected_images_COLDEX'),'CLX/R66a')
+    data,bounds=read_radargram(os.path.join(orig,'projected_images_COLDEX'),'CLX/R66a')
 
     x0=bounds[0]
     x1=bounds[1]
