@@ -81,10 +81,11 @@ mapping={
 }
 
 with open('pst_list.txt','r') as f:
+    WAIS = os.environ['WAIS']
     for line in f.readlines():
         if line.strip() in ['CLX/R68b','CLX/R69a','CLX/R70b']:
             print(f'Loading {line.rstrip()}')
-            img, meta = read_data('/disk/kea/WAIS/targ/comm/DATA-OPR/projected_images_COLDEX',line.rstrip())
+            img, meta = read_data(os.path.join(WAIS,'targ/comm/DATA-OPR/projected_images_COLDEX'),line.rstrip())
             data[line.strip()] = {'img':img,'meta':meta}
         else:
             continue
