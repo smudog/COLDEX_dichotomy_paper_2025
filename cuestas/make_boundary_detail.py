@@ -140,14 +140,15 @@ def plot(targ=os.getcwd().replace('code','targ'),orig=os.getcwd().replace('code'
     fig = pygmt.Figure()
 
     z0=-1000
-    z1=0
+    z1=500
 
     height=0.44
+    #height=0.66
     width=-4
     pygmt.makecpt(cmap='gray',series='-135/-100/5',continuous=True)
 
 # Make fractional layer depth profile
-    sanderson_path = os.path.join(WAIS,orig,'Sanderson_2023')
+    sanderson_path = os.path.join(WAIS,orig,'Sanderson2023')
 
     ea_h1 = read_layer(os.path.join(sanderson_path,'EA_H1_38ka.csv'),flight=bas_flight,origin_x=origin_x,origin_y=origin_y)
     ea_h2 = read_layer(os.path.join(sanderson_path,'EA_H2_90ka.csv'),flight=bas_flight,origin_x=origin_x,origin_y=origin_y)
@@ -197,24 +198,23 @@ def plot(targ=os.getcwd().replace('code','targ'),orig=os.getcwd().replace('code'
     fig.text(position='BL',justify='BL',offset='J0.1c',text=f'           From Below',font='6p,Courier-Bold,blue',fill='dimgray')
     fig.text(position='BL',justify='BL',offset='J0.1c',text=f'From Right',font='6p,Courier-Bold,red',fill='dimgray')
 
-    fig.shift_origin(yshift=f'{-(height+height/2)}i')
-
 # plot radargrams
+    fig.shift_origin(yshift=f'{-(1.5*height+height/2)}i')
     for i,line in enumerate(lines):
         labels = ['c','d','e']
         x0, x1 = get_bounds(line)
         region=[x0,x1,z0,z1]
 
-        fig.basemap(frame=['tblr'], region=region, projection=f'X{width}i/{height}i')
+        fig.basemap(frame=['tblr'], region=region, projection=f'X{width}i/{1.5*height}i')
 
         data, bounds = read_radargram(os.path.join(WAIS,orig,'projected_images_COLDEX'),line)
         fig.grdimage(data)
 
         z = z1 - z0
         x = 1000*(x1-x0)
-        aspect = abs(height/z)/abs(width/x)
+        aspect = abs(1.5*height/z)/abs(width/x)
 
-        fig.text(position='TL',text=f'{labels[i]}) {line}',justify='TL',font='8p,white',offset='J0.1c')
+        fig.text(position='TL',text=f'{labels[i]}) {line}',justify='TL',font='8p,black',offset='J0.1c')
         fig.text(position='BR',text=f'{aspect:.1f}x vertical exageration',justify='BR',font='8p,gray',offset='J0.1c')
 
         if i == 1:
@@ -222,9 +222,9 @@ def plot(targ=os.getcwd().replace('code','targ'),orig=os.getcwd().replace('code'
         else:
             fig.basemap(frame=['WSne','xaf','ya500f'])
 
-        fig.shift_origin(yshift=f'{-(height+height/2)}i')
+        fig.shift_origin(yshift=f'{-(1.5*height+height/2)}i')
 
-    fig.shift_origin(yshift=f'{(height+height/2)}i')
+    fig.shift_origin(yshift=f'{(1.5*height+height/2)}i')
     fig.basemap(frame=['x+lDistance from Dome A origin (km)'])
     fig.show()
     fig.savefig(os.path.join(targ,'coldex_cuestas.png'),dpi=300)
