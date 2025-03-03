@@ -101,8 +101,6 @@ def read_bedmap(path, roughness_interval=400, epsg=3031):
 
 def get_roughness(data, sample_interval=400):
     start_time = time.time()
-    print('Doing Roughness') 
-    print(time.time() - start_time)
 
     #data.reset_index(inplace=True)
 
@@ -219,6 +217,7 @@ def bin_and_grid(data,
     outputs:
         two GeoTiffs - one masked and one unmasked
     '''
+    print(f'Processing {name}')
     targ=os.getcwd().replace('code','targ')
     if rms:
         binned_data = np.sqrt(pygmt.blockmean(x=data['X'], y=data['Y'], z=data[z]**2, region=region, spacing=blockspacing))
@@ -333,17 +332,18 @@ def read_and_process_data(region,blockspacing=2.5e3,roughness_interval=400):
     os.makedirs(orig,exist_ok=True)
     
 # setting corner cells to zero to stablize the interpolation
-    corners = {'X': [region[0],region[0],region[1],region[1]],
+    corners = pd.DataFrame({'X': [region[0],region[0],region[1],region[1]],
                'Y': [region[2],region[3],region[2],region[3]],
                'BED': [0,0,0,0],
                'THICK': [0,0,0,0],
                'SPECULARITY_CONTENT_FILTERED': [0,0,0,0],
-               }
+               'basal layer thickness': [0,0,0,0]
+               })
 # collecting specularity content data
     spec=[]
     spec.append(read_utig(os.path.join(orig,'2022_COLDEX_UTIG.IRSPC2')))
     spec.append(read_utig(os.path.join(orig,'2023_COLDEX_UTIG.IRSPC2')))
-    spec.append(pd.DataFrame(corners))
+    spec.append(corners)
     all_spec = pd.concat(spec)
 
 # collecting thickness and bed elevation data
@@ -351,15 +351,17 @@ def read_and_process_data(region,blockspacing=2.5e3,roughness_interval=400):
     thk.append(read_utig(os.path.join(orig,'ICECAP2_SPC.CRIPR2')))
 
     for f in os.listdir(orig):
-        print(f)
         if 'csv' in f:
             if 'Antarctica_BaslerMKB' in f:
+                print(f'Reading {f} as Open Polar Radar')
                 thk.append(read_opr(os.path.join(orig,f),roughness_interval=roughness_interval))
             elif 'Antarctica_TO' in f:
+                print(f'Reading {f} as Open Polar Radar')
                 thk.append(read_opr(os.path.join(orig,f),roughness_interval=roughness_interval))
             else:
+                print(f'Reading {f} as Bedmap')
                 thk.append(read_bedmap(os.path.join(orig,f),roughness_interval=roughness_interval))
-    thk.append(pd.DataFrame(corners))
+    thk.append(corners)
     all_thk = pd.concat(thk)
 
 
@@ -370,6 +372,20 @@ def read_and_process_data(region,blockspacing=2.5e3,roughness_interval=400):
     grids['roughness'] = bin_and_grid(all_thk,'roughness',region=region,z=f'RMSD_{roughness_interval}',blockspacing=5e3,grdspacing=1e3,maxradius=8e3,filter=10e3)
     grids['icethk'] = bin_and_grid(all_thk,'icethk',region=region,z='THICK',blockspacing=5e3,grdspacing=1e3,maxradius=8e3,filter=10e3)
     grids['bedelv'] = bin_and_grid(all_thk,'bedelv',region=region,z='BED',blockspacing=5e3,grdspacing=1e3,maxradius=8e3,filter=10e3)
+
+    try:
+        basal_df = pd.read_csv(os.path.join(orig,'yan_basal_layer','cxa_bil_thickness.csv'))
+        basal_df['X'] = basal_df['x']
+        basal_df['Y'] = basal_df['y']
+        basal_df = pd.concat([basal_df,corners])
+        grids['basal_layer_thickness'] = bin_and_grid(basal_df,'basal_layer_thickness',region=region,z='basal layer thickness',blockspacing=5e3,grdspacing=1e3,maxradius=8e3,filter=10e3) 
+        grids['fract_basal_ice_percent'] = 100 * (grids['basal_layer_thickness']/grids['icethk'])
+        plot(grid=grids['fract_basal_ice_percent'],name='Basal Ice Fractional Thickness',cmap='ocean',series=[0,40,1],shade=False)
+    except FileNotFoundError:
+        print(f"could not find {os.path.join(orig,'yan_basal_layer','cxa_bil_thickness.csv')}")
+    except KeyError:
+        print(basal_df)
+
     grids['spec'] = bin_and_grid(all_spec,'specularity_content',region=region,z='SPECULARITY_CONTENT_FILTERED',blockspacing=5e3,grdspacing=1e3,maxradius=8e3,filter=10e3)
 
     for g in grids.keys():
