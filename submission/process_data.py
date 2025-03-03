@@ -349,11 +349,14 @@ def read_and_process_data(region,blockspacing=2.5e3,roughness_interval=400):
 # collecting thickness and bed elevation data
     thk=[]
     thk.append(read_utig(os.path.join(orig,'ICECAP2_SPC.CRIPR2')))
+    
+    mkb=[]
 
     for f in os.listdir(orig):
         if 'csv' in f:
             if 'Antarctica_BaslerMKB' in f:
                 print(f'Reading {f} as Open Polar Radar')
+                mkb.append(read_opr(os.path.join(orig,f),roughness_interval=roughness_interval))
                 thk.append(read_opr(os.path.join(orig,f),roughness_interval=roughness_interval))
             elif 'Antarctica_TO' in f:
                 print(f'Reading {f} as Open Polar Radar')
@@ -363,7 +366,7 @@ def read_and_process_data(region,blockspacing=2.5e3,roughness_interval=400):
                 thk.append(read_bedmap(os.path.join(orig,f),roughness_interval=roughness_interval))
     thk.append(corners)
     all_thk = pd.concat(thk)
-
+    all_mkb = pd.concat(mkb)
 
     #rms = get_roughness(all_thk)
 
@@ -387,6 +390,11 @@ def read_and_process_data(region,blockspacing=2.5e3,roughness_interval=400):
         print(basal_df)
 
     grids['spec'] = bin_and_grid(all_spec,'specularity_content',region=region,z='SPECULARITY_CONTENT_FILTERED',blockspacing=5e3,grdspacing=1e3,maxradius=8e3,filter=10e3)
+
+    high_pass = pygmt.grdtrack(grid=grids['bedelv'], points=all_mkb, output_type='pandas', newcolname='GRD_BED')
+    high_pass['HIGH_PASS_BED'] = high_pass['BED'] - high_pass['GRD_BED']
+    high_pass.drop(columns=['BED','GRD_BED','THICK',f'RMSD_{roughness_interval}'],inplace=True)
+    high_pass.to_csv(os.path.join(targ,'hipass_bed.xyz'),index=False,header=False,sep='\t')
 
     for g in grids.keys():
         pygmt.grdsample(grids[g], outgrid = os.path.join(targ,f'{g}.tif=gd:GTiff'))
