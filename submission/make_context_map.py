@@ -83,12 +83,8 @@ def plot(targ=os.getcwd().replace('code','targ'),orig=os.getcwd().replace('code'
     transects = read_psts(path=os.path.join(orig,'projected_images_COLDEX','metadata'))
 
     # Plot the raster using PyGMT
-    # Download grid for Earth relief with a resolution of 10 arc-minutes and
-    # gridline registration [Default]
+    # make insert map 
     region_context = [0,360,-90,-60]
-    #grid_map = pygmt.datasets.load_earth_relief(
-    #            resolution="30m",
-    #        )
 
     pygmt.config(MAP_FRAME_TYPE='plain',FONT_ANNOT_PRIMARY='8p',FONT_LABEL='8p')
     fig = pygmt.Figure()
@@ -103,6 +99,7 @@ def plot(targ=os.getcwd().replace('code','targ'),orig=os.getcwd().replace('code'
     fig.plot(x=transects[focus_line]['EPSG 3031 Easting [m]'].iloc[0],y=transects['CLX/R66a']['EPSG 3031 Northing [m]'].iloc[0],style='c0.1c',fill='blue')
     fig.basemap(frame=['af','wsNE','x+lEasting (km)','y+lNorthing (km)'],region=region_km)
  
+    #make content map
     fig.shift_origin(xshift="-1.75i",yshift='-0.15i')
     fig.basemap(
             region=region_context,
@@ -110,7 +107,16 @@ def plot(targ=os.getcwd().replace('code','targ'),orig=os.getcwd().replace('code'
             frame="g"
     )
     fig.coast(area_thresh='+ai',land="lightblue", water="skyblue")
-    fig.coast(area_thresh='+ag',land="snow")
+    fig.coast(area_thresh='+ag',land="white")
+    insert = [[x1,y1,x2,y2]]
+    fig.plot(data=insert,fill='snow',pen='0.25p',style="r+s",projection="X2i",region=[-3333134.03,3333134.03,-3333134.03,3333134.03])
+
+    fig.basemap(
+            region=region_context,
+            projection="S0/-90/2i",
+            frame="f"
+    )
+
     for transect in transects.keys():
         x = transects[transect]['Longitude [degrees]']
         y = transects[transect]['Latitude [degrees]']
@@ -119,9 +125,10 @@ def plot(targ=os.getcwd().replace('code','targ'),orig=os.getcwd().replace('code'
 
     fig.text(x=123.33,y=-75.1,text='Dome C',justify='BL',font='8p',offset='J0.1c+v')
     fig.text(x=77.33,y=-80.33,text='Dome A',justify='BL',font='8p',offset='J0.1c+v')
-    fig.text(x=0,y=-90,text='South Pole',justify='BR',font='8p',offset='J0.1c+v')
-    fig.text(x=166.67,y=-77.83,text='McMurdo',justify='TR',font='8p',offset='J0.1c+v')
+    fig.text(x=0,y=-90,text='South Pole',justify='BR',font='8p',offset='J0.2c+v')
+    fig.text(x=166.67,y=-77.83,text='McMurdo Station',justify='TR',font='8p',offset='J0.1c+v')
 
+    #make radargram
     data,bounds=read_radargram(os.path.join(orig,'projected_images_COLDEX'),'CLX/R66a')
 
     x0=bounds[0]
