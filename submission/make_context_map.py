@@ -145,18 +145,41 @@ def plot(targ=os.getcwd().replace('code','targ'),orig=os.getcwd().replace('code'
 
     aspect = abs(height/z)/abs(width/x)
 
-    fig.shift_origin(xshift='0.5i',yshift='-1.1i')
+    basal_unit_insert1 = [450, 500, 600, 1600]
+    basal_unit_rect1 = [[basal_unit_insert1[0],basal_unit_insert1[2],basal_unit_insert1[1],basal_unit_insert1[3]]]
+
+    basal_unit_insert2 = [640, 690, 100, 1100]
+    basal_unit_rect2 = [[basal_unit_insert2[0],basal_unit_insert2[2],basal_unit_insert2[1],basal_unit_insert2[3]]]
+
+    fig.shift_origin(xshift='0.5i',yshift='-2.1i')
     fig.basemap(region=[bounds[0],bounds[1],z0,z1],frame=['af','WSne','x+lDistance from Dome A origin (km)','y+lWGS 84 Elevation (m)'],projection=f'X{width}i/{height}i')
-    pygmt.makecpt(cmap='gray',series='-130/-50/5',continuous=True)
+    pygmt.makecpt(cmap='gray',series='-130/-65/5',continuous=True)
     fig.grdimage(data,dpi='i')
     fig.text(position='TL',text=f'Transect {focus_line}',justify='TL',font='8p,white',offset='J0.1c')
     fig.text(position='BR',text=f'{aspect:.1f}x vertical exageration',justify='BR',font='8p,gray',offset='J0.1c')
     fig.text(x=800,y=1000,text=f'South Pole Basin',justify='MC',font='6p,Helvetica-Bold,ivory')
-    fig.text(x=550,y=1500,text=f'Gambertsev Foothils',justify='MC',font='6p,Helvetica-Bold,ivory')
+    fig.text(x=600,y=-150,text=f'Gambertsev Foothils',justify='MC',font='6p,Helvetica-Bold,ivory')
+    fig.plot(data=basal_unit_rect2,pen="1p,gold",style='r+s')
+    fig.plot(data=basal_unit_rect1,pen="1p,orange",style='r+s')
 
     fig.shift_origin(yshift='-0.05i')
     fig.plot(x=[x0,x1],y=[z0,z0],pen='1p,blue',no_clip=True)
     fig.plot(x=[x0],y=[z0],style='c0.25c',fill='blue',no_clip=True)
+    
+    fig.shift_origin(yshift="1.1i")
+    pygmt.makecpt(cmap='gray',series='-130/-90/5',continuous=True)
+    fig.grdimage(data,dpi='i',region=basal_unit_insert2,projection=f'X{width/2}i/{height}i')
+    fig.text(position='BL',text=f'Basal Unit',justify='BL',font='8p,white',offset='J0.2c')
+    fig.text(position='TL',text=f'Stratigraphic Ice',justify='TL',font='8p,black',offset='J0.2c')
+    fig.plot(data=basal_unit_rect2,pen="2p,gold",style='r+s')
+
+    fig.shift_origin(xshift='2i')
+    pygmt.makecpt(cmap='gray',series='-130/-90/5',continuous=True)
+    fig.grdimage(data,dpi='i',region=basal_unit_insert1,projection=f'X{width/2}i/{height}i')
+    fig.text(position='BL',text=f'Basal Unit',justify='BL',font='8p,white',offset='J0.2c')
+    fig.text(position='TL',text=f'Stratigraphic Ice',justify='TL',font='8p,black',offset='J0.2c')
+    fig.plot(data=basal_unit_rect1,pen="2p,orange",style='r+s')
+
     fig.savefig(os.path.join(targ,'coldex_context_map.png'))
 
 plot()
