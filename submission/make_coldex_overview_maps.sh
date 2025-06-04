@@ -15,8 +15,8 @@ then
 fi
 
 #Getting pointers to original data
-srf=$TARG/srfelv.xyz_val.grd
-#rema/1km/rema_mosaic_1km_v2.0_filled_cop30_dem.tif
+#srf=$TARG/srfelv.xyz_val.grd
+srf=$ORIG/rema/rema_mosaic_1km_v2.0_filled_cop30_dem.tif
 vel=$TARG/Mouginot2019
 sanderson=$ORIG/Sanderson_2023/EA_H3_162ka.csv
 bnd=$ORIG/clipped_bnd.gmt
@@ -82,20 +82,6 @@ function profiles () {
 echo Generated surface slope
 gmt grdgradient $srf -D -S$TARG/srfgrad.grd -G$TARG/srfslopedirection.grd
 
-echo Generated englacial layers
-grep -v '#' < $sanderson | tr ',' '\t' | awk 'NR>1{print $2, $3, 100 - ($8*100)}' \
-         > $TARG/162.xyz
-
-gmt blockmean $REGION_M -I1000 < $TARG/162.xyz \
-        | gmt surface $REGION_M -I500 -T.35 -G$TARG/162.grd
-
-if [ ! -s $TARG/162.mask.grd ]
-then
-echo masking
-gmt grdmask $REGION_M -I500 $TARG/162.xyz -S5000 -NNaN/NaN/1 -G$TARG/162.mask.grd
-echo done masking
-gmt grdmath $TARG/162.grd $TARG/162.mask.grd MUL = $TARG/162.xyz_val.grd
-fi
 
 echo Plotting Supplementary Figure 2
 gmt begin $TARG/coldex_south_pole_basin_maps png 
@@ -108,7 +94,7 @@ gmt begin $TARG/coldex_south_pole_basin_maps png
             gmt plot $bnd -W3p,black -t50
             gmt colorbar -C \
                         -DJLM+o0.75c/0 \
-                        -Bxa -By+l"grad"
+                        -Bxa -By+l"gradient"
 
             gmt basemap -Bxfa -Byfa -BwSne $REGION_KM
 
@@ -222,7 +208,7 @@ gmt begin $TARG/coldex_overview_maps png
             echo plotting bed
             gmt makecpt -Cglobe -Z -T-2000/2000/100 -M --COLOR_NAN=gray
             gmt grdimage -Blrbt $bed -I -C  $REGION_M
-            gmt grdcontour $bed -C200 -Wc0.1p -Wa0.25p -A1000+f6p $REGION_M 
+            gmt grdcontour $bed -C200 -Wc0.1p,white -Wa0.25p,white -A1000+f6p,white $REGION_M 
             gmt colorbar -C  -DJTC -JX -Bxa -By+l"m" 
 
             gmt plot $bnd -W1p,black 
@@ -230,36 +216,37 @@ gmt begin $TARG/coldex_overview_maps png
             gmt basemap -Bxa -Bya -BWsNe $REGION_KM
 
             profiles
-
-            gmt text $REGION_KM -F+f6p,white+jBC -t25 -Gwhite <<- EOF
-            275 30 South Pole
-            275 5 Basin
-            75 150 Penscola 
-            75 125 Subglacial
-            75 105 Basin
-            170 180 ReSH
-            600 175 Gambersevs
-            270 -25 'Elbow'
-            370 130 'Platter'
-            30 10 Breaches
-            255 -100 Jordan 2018 anomaly
+            
+            cat <<-EOF > big_places.txt
+            275 30 SOUTH POLE
+            275 10 BASIN
+            75 145 PENSCOLA 
+            75 125 SUBGLACIAL
+            75 105 BASIN
+            170 210 RECOVERY
+            170 190 SUBGLACIAL
+            170 170 MOUNTAINS
+            600 175 GAMBERTSEV
+            600 155 SUBGLACIAL
+            600 135 MOUNTAINS
 EOF
 
-            gmt text $REGION_KM -F+f6p,black+jBC <<- EOF
-            275 30 South Pole
-            275 5 Basin
-            75 150 Penscola 
-            75 125 Subglacial
-            75 105 Basin
-            170 180 ReSH
-            600 175 Gambersevs
-            270 -25 'Elbow'
-            370 130 'Platter'
-            30 10 Breaches
-            255 -100 Jordan 2018 anomaly
+    gmt text $REGION_KM -F+f6p,Palatino-BoldItalic,white+jBC -C25%+tO -t25 -Gwhite < big_places.txt
+    gmt text $REGION_KM -F+f6p,Palatino-BoldItalic,black+jBC < big_places.txt
+
+            cat <<-EOF > small_places.txt 
+            234 -15 TL The 'Elbow' 
+            354 123  BC The 'Platter' 
+            87 0 BC The 'Breaches'
+            140 -100 ML Jordan et al. (2018) anomaly
+            0 0 TC South Pole
 EOF
 
-            gmt basemap -JS0/-90/$WIDTH -Bxg30 -Byg1 $REGION_GEO -t50
+echo plotting smalls 
+    gmt text $REGION_KM -F+f6p,Palatino-BoldItalic,black+j  -Dj0.3c -C25%+tO -t25 -Gwhite < small_places.txt
+    gmt text $REGION_KM -F+f6p,Palatino-BoldItalic,black+j -Dj0.3c+v < small_places.txt
+
+echo 0 0 | gmt psxy -St0.25c -Gblack 
 
             gmt text -JX$WIDTH/0 $REGION_KM -F+f8p+jLT -D0.2c/-0.2c  -W -Gwhite <<- EOF
             ${X_W} ${Y_N} (a) Bed elevation
@@ -273,7 +260,7 @@ EOF
             gmt grdimage -Blrbt+ggray $TARG/srfgrad.grd -C 
             gmt colorbar -C \
                             -DJTC \
-                            -JX -Bxa -By+l"grad" \
+                            -JX -Bxa -By+l"gradient" \
 
             gmt plot $bnd $REGION_M -W1p,black 
             gmt grdvector $vel/VX.tif $vel/VY.tif -S1p -Q+e+n1 -Gwhite -Ix50  -W0.5p,white
@@ -286,7 +273,7 @@ EOF
                 | awk '{print $1, $2, "Fig. S1"}' \
                 | gmt text -F+jTL+f6p,Helvetica-Bold,yellow -D0.1c/-0.1c
 
-            gmt basemap -JS0/-90/$WIDTH -Bxg30 -Byg1 $REGION_GEO -t50
+            #gmt basemap -JS0/-90/$WIDTH -Bxg30 -Byg1 $REGION_GEO -t50
             gmt text -JX$WIDTH/0 $REGION_KM -F+f8p+jLT -D0.2c/-0.2c -W -Gwhite <<- EOF
             ${X_W} ${Y_N} (b) Surface slope and ice velocity
 EOF
@@ -296,21 +283,36 @@ EOF
             echo plotting specularity
             gmt makecpt -Cseafloor -T0/0.5/0.01 -Z -Di 
             gmt grdimage -Bblrt+ggray $spec -C $REGION_M -Q
-            gmt grdcontour $bed -C200 -A1000+f6p -Wc0.1p -Wa0.25p $REGION_M
+            gmt grdcontour $bed -C200 -A1000+f6p,white -Wc0.1p,white -Wa0.25p,white $REGION_M
             gmt plot $bnd -W1p,black 
             gmt psbasemap -BWsne -Bxa -Bya $REGION_KM 
             
             profiles
-            gmt psbasemap -JS0/-90/$WIDTH -Bxg30 -Byg1 $REGION_GEO --MAP_POLAR_CAP=88/88 -t50 
+            #gmt psbasemap -JS0/-90/$WIDTH -Bxg30 -Byg1 $REGION_GEO --MAP_POLAR_CAP=88/88 -t50 
             gmt colorbar -C \
                         -DJBC+o0/0.5c \
-                        $REGION_M -JX -Bxa -By+l"frac" 
+                        $REGION_M -JX -Bxa -By+l"fraction" 
 
             gmt text -JX$WIDTH/0 $REGION_KM -F+f8p+jLT -D0.2c/-0.2c -W -Gwhite <<- EOF
             ${X_W} ${Y_N} (c) Basal specularity content
 EOF
 
 #Englacial structure
+echo Generated englacial layers
+grep -v '#' < $sanderson | tr ',' '\t' | awk 'NR>1{print $2, $3, 100 - ($8*100)}' \
+         > $TARG/162.xyz
+
+gmt blockmean $REGION_M -I1000 < $TARG/162.xyz \
+        | gmt surface $REGION_M -I500 -T.35 -G$TARG/162.grd
+
+if [ ! -s $TARG/162.mask.grd ]
+then
+echo masking
+gmt grdmask $REGION_M -I500 $TARG/162.xyz -S5000 -NNaN/NaN/1 -G$TARG/162.mask.grd
+echo done masking
+gmt grdmath $TARG/162.grd $TARG/162.mask.grd MUL = $TARG/162.xyz_val.grd
+fi
+
         gmt subplot set 1,1
             echo plotting basal ice and horizons
 
@@ -329,7 +331,7 @@ EOF
 
             profiles
 
-            gmt basemap -JS0/-90/$WIDTH -Bxg30 -Byg1 $REGION_GEO -t50
+            #gmt basemap -JS0/-90/$WIDTH -Bxg30 -Byg1 $REGION_GEO -t50
 
             gmt text -JX$WIDTH/0 $REGION_KM -F+f8p+jLT -D0.2c/-0.2c -W -Gwhite <<- EOF
             ${X_W} ${Y_N} (d) Fractional thickness: basal unit (background), ice >162 ka
@@ -340,10 +342,12 @@ EOF
 #Legend
     gmt legend -DJTC+w${DOUBLE_WIDTH}c+o0/1.5c -F+glightgray --FONT_ANNOT_PRIMARY=6p <<- EOF
 H 6p,Helvetica-Bold LEGEND
-N 4
+N 3
+S - - 0.5c - 0.1p,white - 200 m bed elevation contours 
 S - - 0.5c - 1p,blue - CLX/MKB2o/R66a (Fig. 1) 
 S - - 0.5c - 1p,white - Cuesta profiles (Fig. 3) 
 S - v 15p white 0.25p,white - Ice flow vector (15 m/yr shown)
 S - - 0.5c - 1p,black - Mapped dichotomy (basal ice)    
+S - c 0.25c - 1p,yellow,dashed - Thermal Anomaly    
 EOF
 gmt end
