@@ -14,6 +14,22 @@ cxa1=https://data.cresis.ku.edu/data/rds/2022_Antarctica_BaslerMKB/csv_good/2022
 cxa2=https://data.cresis.ku.edu/data/rds/2023_Antarctica_BaslerMKB/csv_good/2023_Antarctica_BaslerMKB.csv
 agap_ldeo=https://data.cresis.ku.edu/data/rds/2009_Antarctica_TO_Gambit/csv_good/2009_Antarctica_TO_Gambit.csv
 
+rm -frv $ORIG/COLDEX_SRF
+mkdir -p $ORIG/COLDEX_SRF
+cd $ORIG/COLDEX_SRF
+
+cxa1_las="https://dataverse.tdl.org/api/access/dataset/:persistentId/?persistentId=doi:10.18738/T8/99IEOG"
+curl -O -J ${cxa1_las}
+unzip *.zip
+rm -rvf $ORIG/COLDEX_SRF/*.zip
+cxa2_las="https://dataverse.tdl.org/api/access/dataset/:persistentId/?persistentId=doi:10.18738/T8/PNBFOL"
+curl -O -J ${cxa2_las} 
+unzip *.zip
+rm -rvf $ORIG/COLDEX_SRF/*.zip
+cd $ORIG
+exit
+
+
 #locations of bedmap data
 recovery_ldeo=https://ramadda.data.bas.ac.uk/repository/entry/get/LDEO_2007_Recovery-Lakes_AIR_BM2.csv?entryid=synth%3A2fd95199-365e-4da1-ae26-3b6d48b3e6ac%3AL0xERU9fMjAwN19SZWNvdmVyeS1MYWtlc19BSVJfQk0yLmNzdg%3D%3D
 polargap=https://ramadda.data.bas.ac.uk/repository/entry/get/BAS_2015_POLARGAP_AIR_BM3.csv?entryid=synth%3A91523ff9-d621-46b3-87f7-ffb6efcd1847%3AL0JBU18yMDE1X1BPTEFSR0FQX0FJUl9CTTMuY3N2
