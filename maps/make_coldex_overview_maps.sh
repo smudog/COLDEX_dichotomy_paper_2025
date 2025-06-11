@@ -26,10 +26,10 @@ X_E_M=${X_E}000
 Y_S_M=${Y_S}000
 Y_N_M=${Y_N}000
 
-LON_1=`echo "$X_W $Y_S" | mapproject -Fk -C -I -Js0/-90/-71/1:5000000 -R0/360/-90/-45 | awk '{print $1}'`
-LAT_1=`echo "$X_W $Y_S" | mapproject -Fk -C -I -Js0/-90/-71/1:5000000 -R0/360/-90/-45 | awk '{print $2}'`
-LAT_2=`echo "$X_E $Y_N" | mapproject -Fk -C -I -Js0/-90/-71/1:5000000 -R0/360/-90/-45 | awk '{print $1}'`
-LON_2=`echo "$X_E $Y_N" | mapproject -Fk -C -I -Js0/-90/-71/1:5000000 -R0/360/-90/-45 | awk '{print $2}'`
+LON_1=`echo "$X_W $Y_S" | gmt mapproject -Fk -C -I -Js0/-90/-71/1:5000000 -R0/360/-90/-45 | awk '{print $1}'`
+LAT_1=`echo "$X_W $Y_S" | gmt mapproject -Fk -C -I -Js0/-90/-71/1:5000000 -R0/360/-90/-45 | awk '{print $2}'`
+LAT_2=`echo "$X_E $Y_N" | gmt mapproject -Fk -C -I -Js0/-90/-71/1:5000000 -R0/360/-90/-45 | awk '{print $1}'`
+LON_2=`echo "$X_E $Y_N" | gmt mapproject -Fk -C -I -Js0/-90/-71/1:5000000 -R0/360/-90/-45 | awk '{print $2}'`
 REGION_GEO="-R${LON_1}/${LAT_1}/${LAT_2}/${LON_2}r"
 REGION_KM=-R${X_W}/${X_E}/${Y_S}/${Y_N}
 REGION_M=-R${X_W_M}/${X_E_M}/${Y_S_M}/${Y_N_M}
