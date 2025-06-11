@@ -175,15 +175,15 @@ def plot(targ=os.getcwd().replace('code','targ'),orig=os.getcwd().replace('code'
     fig.basemap(frame=['tblr'], region=region_layers, projection=f'X{width}i/-{2*height}i')
     fig.plot(x=ea_h1['Distance'], y=ea_h1['fraction_depth']*100, pen='1p,darkblue')
     text_y = ea_h1[ea_h1['Distance'] < text_x]['fraction_depth'].iloc[0] * 100
-    fig.text(x=text_x,y=text_y,justify='CM',fill='white',pen='0.25p,darkblue',clearance='+tO',text='H1 horizon',font='6p,darkblue')
+    fig.text(x=text_x,y=text_y,justify='CM',fill='white',pen='0.25p,darkblue',clearance='+tO',text='H1 (38 ka) horizon',font='6p,darkblue')
 
     fig.plot(x=ea_h2['Distance'], y=ea_h2['fraction_depth']*100, pen='1p,blue')
     text_y = ea_h2[ea_h2['Distance'] < text_x]['fraction_depth'].iloc[0] * 100
-    fig.text(x=text_x,y=text_y,justify='CM',fill='white',pen='0.25p,blue',clearance='+tO',text='H2 horizon',font='6p,blue')
+    fig.text(x=text_x,y=text_y,justify='CM',fill='white',pen='0.25p,blue',clearance='+tO',text='H2 (90 ka) horizon',font='6p,blue')
 
     fig.plot(x=ea_h3['Distance'], y=ea_h3['fraction_depth']*100, pen='1p,lightblue')
     text_y = ea_h3[ea_h3['Distance'] < text_x]['fraction_depth'].iloc[0] * 100
-    fig.text(x=text_x,y=text_y,justify='CM',fill='white',pen='0.25p,lightblue',clearance='+tO',text='H3 horizon',font='6p,lightblue')
+    fig.text(x=text_x,y=text_y,justify='CM',fill='white',pen='0.25p,lightblue',clearance='+tO',text='H3 (162 ka) horizon',font='6p,lightblue')
 
     fig.text(position='TL',justify='TL',fill='white',pen='0.25p,black',clearance='+tO',offset='J0.1c',text=f'a) AGAP Flight {bas_flight} Horizon Fractional Depth',font='8p,black')
     fig.basemap(frame=['WSne','af','y+l% depth'])
