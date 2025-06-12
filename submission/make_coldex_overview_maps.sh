@@ -172,10 +172,10 @@ EOF
     gmt legend -DJBC+w18c+o0/1c -F+glightgray --FONT_ANNOT_PRIMARY=6p <<- EOF
 H 6p,Helvetica-Bold LEGEND (Map coordinates in EPGS:3031 km)
 N 5
-S - - 0.5c - 2p,blue - CLX/R66a ( Fig. 1) 
-S - - 0.5c - 2p,orange - CLX/R75a (Fig. 1) 
+S - - 0.5c - 2p,blue - CLX/R66a (Fig. 1) 
 S - - 0.5c - 2p,white - Cuesta profiles (Fig. 3) 
-S - t 0.25c yellow - - High pass postive bed topography 
+S - - 0.5c - 2p,orange - CLX/R75a (Fig. 4) 
+S - t 0.25c yellow - - High pass bed topography 
 S - - 0.5c - 3p,dimgray - Mapped dichotomy
 EOF
 
