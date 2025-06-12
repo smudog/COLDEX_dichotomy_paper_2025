@@ -66,6 +66,13 @@ function profiles () {
         | awk 'NR%20==0{print $10/1000, $11/1000}' \
         | gmt plot -W1p,blue
 
+    cat $data/metadata/CLX_R75a_image.csv \
+        | tr ',' '\t' \
+        | awk 'NR>1' \
+        | awk 'NR%20==0{print $10/1000, $11/1000, $12/1000}' \
+        | awk '$3>650' | awk '$3<950' \
+        | gmt plot -W1p,orange
+
     for cuesta in $TARG/CLX_R*.cuestas.xy
     do
 
@@ -91,7 +98,7 @@ gmt begin $TARG/coldex_south_pole_basin_maps png
             gmt makecpt -T-0.001/0.005/0.0001 -Cocean -I
             gmt grdimage $TARG/srfgrad.grd -Bbtlr -C
             gmt grdcontour $srf -C5 -Wc0.25p,white -Wa0.5p,white -A25+f6p -T 
-            gmt plot $bnd -W3p,black -t50
+            gmt plot $bnd -W3p,black -t50  
             gmt colorbar -C \
                         -DJLM+o0.75c/0 \
                         -Bxa -By+l"gradient"
@@ -101,7 +108,7 @@ gmt begin $TARG/coldex_south_pole_basin_maps png
             profiles
 
             cat $hipass \
-               | gmt wiggle $REGION_M -Z1000 -DjBR+o0.25c/0.25c+w250+lm -Gyellow+p -F+gwhite --FONT_ANNOT_PRIMARY=8p 
+               | gmt wiggle $REGION_M -Z1000c -DjBR+o0.25c/0.25c+w250+lm -gd1000 -Gyellow+p -F+gwhite --FONT_ANNOT_PRIMARY=8p 
 
             gmt text $REGION_KM -F+f8p+jLT -D0.2c/-0.2c -W -Gwhite <<- EOF
             ${X_W} ${Y_N} (a) Surface gradient and elevation contours
@@ -113,7 +120,7 @@ EOF
             gmt grdimage $bed -Bbtlr -I -C $REGION_M
             gmt grdcontour $bed -C200 -Wa0.5p -Wc0.1p -A600+f6p -T 
             gmt grdcontour $srf -C5 -Wc0.25p,white -Wa0.5p,white -T -A25+f6p 
-            gmt plot $bnd -W3p,black -t50
+            gmt plot $bnd -W3p,black -t50  
 
             gmt basemap -JX$WIDTH/0 \
                          -Bxfa -Byfa \
@@ -121,7 +128,7 @@ EOF
             profiles
 
             cat $hipass \
-               | gmt wiggle $REGION_M -Z1000 -Gyellow+p 
+               | gmt wiggle $REGION_M -Z1000 -Gyellow+p -gd1000 
 
             gmt text -JX$WIDTH/0 $REGION_KM -F+f8p+jLT -D0.2c/-0.2c -W -Gwhite <<- EOF 
             ${X_W} ${Y_N} (b) Bed elevation grid
@@ -135,7 +142,7 @@ EOF
             gmt makecpt -Cocean -Z -T0/25/2 -M --COLOR_NAN=gray
             gmt grdimage $basal -Bbtlr -C
             gmt grdcontour $srf -C5 -Wc0.25p,white -Wa0.5p,white -A25+f6p -T 
-            gmt plot $bnd -W3p,black -t50
+            gmt plot $bnd -W3p,black -t50  
             gmt colorbar -C \
                         -DJLM+o0.75c/0 \
                         -Bxa -By+l"%"
@@ -150,7 +157,7 @@ EOF
             gmt makecpt -Cmagma -T0/40/1 -Di -Z 
             gmt grdimage $rmsd -Bbtlr -C
             gmt grdcontour $srf -C5 -Wc0.5p,white -Wa0.5p,white -A25+f6p -T 
-            gmt plot $bnd -W3p,black -t50
+            gmt plot $bnd -W3p,black -t50  
             gmt colorbar -C \
                         -DJRM+o0.75c/0 \
                         -Bxa -By+l"m"
@@ -164,8 +171,9 @@ EOF
 
     gmt legend -DJBC+w18c+o0/1c -F+glightgray --FONT_ANNOT_PRIMARY=6p <<- EOF
 H 6p,Helvetica-Bold LEGEND (Map coordinates in EPGS:3031 km)
-N 4
-S - - 0.5c - 2p,blue - CLX/MKB2o/R66a (Fig. 1) 
+N 5
+S - - 0.5c - 2p,blue - CLX/R66a ( Fig. 1) 
+S - - 0.5c - 2p,orange - CLX/R75a (Fig. 1) 
 S - - 0.5c - 2p,white - Cuesta profiles (Fig. 3) 
 S - t 0.25c yellow - - High pass postive bed topography 
 S - - 0.5c - 3p,dimgray - Mapped dichotomy
@@ -211,7 +219,7 @@ gmt begin $TARG/coldex_overview_maps png
             gmt grdcontour $bed -C200 -Wc0.1p,white -Wa0.25p,white -A1000+f6p,white $REGION_M 
             gmt colorbar -C  -DJTC -JX -Bxa -By+l"m" 
 
-            gmt plot $bnd -W1p,black 
+            gmt plot $bnd -W1p,black   
 
             gmt basemap -Bxa -Bya -BWsNe $REGION_KM
 
@@ -236,7 +244,7 @@ EOF
 
             cat <<-EOF > small_places.txt 
             234 -15 TL The 'Elbow' 
-            354 123  BC The 'Platter' 
+            354 123  TL The 'Platter' 
             87 0 BC The 'Breaches'
             140 -100 ML Jordan et al. (2018) anomaly
             0 0 TC South Pole
@@ -244,7 +252,7 @@ EOF
 
 echo plotting smalls 
     gmt text $REGION_KM -F+f6p,Palatino-BoldItalic,black+j  -Dj0.3c -C25%+tO -t25 -Gwhite < small_places.txt
-    gmt text $REGION_KM -F+f6p,Palatino-BoldItalic,black+j -Dj0.3c+v < small_places.txt
+    gmt text $REGION_KM -F+f6p,Palatino-BoldItalic,black+j -Dj0.3c+v1p < small_places.txt
 
 echo 0 0 | gmt psxy -St0.25c -Gblack 
 
@@ -262,8 +270,8 @@ EOF
                             -DJTC \
                             -JX -Bxa -By+l"gradient" \
 
-            gmt plot $bnd $REGION_M -W1p,black 
-            gmt grdvector $vel/VX.tif $vel/VY.tif -S1p -Q+e+n1 -Gwhite -Ix50  -W0.5p,white
+            gmt plot $bnd $REGION_M -W1p,black   
+            gmt grdvector $vel/VX.tif $vel/VY.tif -S1p -Q0.1c+e+h0+a40 -Gwhite -Ix50  -W0.5p,white
             gmt basemap -Bxa -Bya -BwNse $REGION_KM
 
             profiles
@@ -284,7 +292,7 @@ EOF
             gmt makecpt -Cseafloor -T0/0.5/0.01 -Z -Di 
             gmt grdimage -Bblrt+ggray $spec -C $REGION_M -Q
             gmt grdcontour $bed -C200 -A1000+f6p,white -Wc0.1p,white -Wa0.25p,white $REGION_M
-            gmt plot $bnd -W1p,black 
+            gmt plot $bnd -W1p,black   
             gmt psbasemap -BWsne -Bxa -Bya $REGION_KM 
             
             profiles
@@ -320,7 +328,7 @@ fi
             gmt makecpt -Cocean -Z -T0/40/2
             gmt grdimage $basal -Bbrlt+ggray -JX$WIDTH/0 -C $REGION_M -Q
             gmt colorbar -C -DJBC+o0/0.5c -Bxa -By+l"%"
-            gmt plot $bnd -W1p,black 
+            gmt plot $bnd -W1p,black  
             
             grep -v '#' < $sanderson | tr ',' '\t' | awk 'NR>1{print $2, $3, 100 - ($8*100)}' \
                 | gmt plot -Sc0.15c -Gblack 
@@ -342,10 +350,11 @@ EOF
 #Legend
     gmt legend -DJTC+w${DOUBLE_WIDTH}c+o0/1.5c -F+glightgray --FONT_ANNOT_PRIMARY=6p <<- EOF
 H 6p,Helvetica-Bold LEGEND
-N 3
+N 4
 S - - 0.5c - 0.1p,white - 200 m bed elevation contours 
-S - - 0.5c - 1p,blue - CLX/MKB2o/R66a (Fig. 1) 
+S - - 0.5c - 1p,blue - CLX/R66a (Fig. 1) 
 S - - 0.5c - 1p,white - Cuesta profiles (Fig. 3) 
+S - - 0.5c - 1p,orange - CLX/R75a (Fig. 4) 
 S - v 15p white 0.25p,white - Ice flow vector (15 m/yr shown)
 S - - 0.5c - 1p,black - Mapped dichotomy (basal ice)    
 S - c 0.25c - 1p,yellow,dashed - Thermal Anomaly    

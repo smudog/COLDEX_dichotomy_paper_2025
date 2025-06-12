@@ -20,6 +20,7 @@ from pyproj import Transformer
 import pandas as pd
 import numpy as np
 import time
+from datetime import datetime, timezone
 
 def read_opr(path, roughness_interval=400, epsg=3031):
     '''reads data as formated at the Open Polar Radar website
@@ -31,13 +32,19 @@ def read_opr(path, roughness_interval=400, epsg=3031):
     '''
     data=pd.read_csv(path)
     transformer = Transformer.from_crs(4326,epsg,always_xy=True)
+
+    if 'UTCTIMESOD' in data.keys():
+        data['TIME'] = pd.to_datetime(data['FRAME'].apply(str).str[:8],format="%Y%m%d") + pd.to_timedelta(data['UTCTIMESOD'],unit='s')
+    else:
+        data['TIME'] = pd.to_datetime((data['LON'] * 0),unit='s')
     
+
     data['X'], data['Y'] = transformer.transform(data['LON'],data['LAT'])
     data['BED'] = (data['ELEVATION'] - data['SURFACE']) - data['THICK']
 
     data[f'RMSD_{roughness_interval}'] = get_roughness(data, sample_interval=roughness_interval)
 
-    return data[['X','Y','BED','THICK',f'RMSD_{roughness_interval}']]
+    return data[['X','Y','BED','THICK',f'RMSD_{roughness_interval}','TIME']]
 
 def read_utig(path, roughness_interval=400, epsg=3031):
     '''reads UTIG formatted data
@@ -322,7 +329,28 @@ def nnbathy(data,region,spacing):
         exit()
         print("nnbathy executable not found. Ensure it's in your PATH.")     
 
-        
+def read_radials():
+    orig=os.getcwd().replace('code','orig')
+    metadata_path = os.path.join(orig,'projected_images_COLDEX/metadata')
+    limits={}
+    for csv in os.listdir(metadata_path):
+        if 'CLX_R' in csv:
+            path = os.path.join(metadata_path,csv)
+            name=f"{csv.split('_')[0]}/{csv.split('_')[1]}"
+            df = pd.read_csv(path)
+            df['time'] = pd.to_datetime(df['UNIX time [s]'],unit='s')
+            start = df['time'].iloc[0]
+            end = df['time'].iloc[-1]
+            limits[name] = (start,end)
+    return limits
+
+def get_radials(all_mkb=None):
+    limits = read_radials()
+    radials=[]
+    for radial in limits.keys():
+        mask = (all_mkb['TIME'] > limits[radial][0]) & (all_mkb['TIME'] < limits[radial][1])
+        radials.append(all_mkb.loc[mask])
+    return pd.concat(radials)
 
 def read_and_process_data(region,blockspacing=2.5e3,roughness_interval=400):
     targ=os.getcwd().replace('code','targ')
@@ -391,9 +419,11 @@ def read_and_process_data(region,blockspacing=2.5e3,roughness_interval=400):
 
     grids['spec'] = bin_and_grid(all_spec,'specularity_content',region=region,z='SPECULARITY_CONTENT_FILTERED',blockspacing=5e3,grdspacing=1e3,maxradius=8e3,filter=10e3)
 
-    high_pass = pygmt.grdtrack(grid=grids['bedelv'], points=all_mkb, output_type='pandas', newcolname='GRD_BED')
+    all_radials = get_radials(all_mkb=all_mkb)
+
+    high_pass = pygmt.grdtrack(grid=grids['bedelv'], points=all_radials, output_type='pandas', newcolname='GRD_BED')
     high_pass['HIGH_PASS_BED'] = high_pass['BED'] - high_pass['GRD_BED']
-    high_pass.drop(columns=['BED','GRD_BED','THICK',f'RMSD_{roughness_interval}'],inplace=True)
+    high_pass.drop(columns=['BED','GRD_BED','THICK',f'RMSD_{roughness_interval}','TIME'],inplace=True)
     high_pass.to_csv(os.path.join(targ,'hipass_bed.xyz'),index=False,header=False,sep='\t')
 
     for g in grids.keys():
