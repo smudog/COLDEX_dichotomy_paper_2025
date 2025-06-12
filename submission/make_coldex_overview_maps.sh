@@ -220,13 +220,13 @@ gmt begin $TARG/coldex_overview_maps png
             cat <<-EOF > big_places.txt
             275 30 SOUTH POLE
             275 10 BASIN
-            75 145 PENSCOLA 
+            75 145 PENSACOLA 
             75 125 SUBGLACIAL
             75 105 BASIN
             170 210 RECOVERY
             170 190 SUBGLACIAL
-            170 170 MOUNTAINS
-            600 175 GAMBERTSEV
+            170 170 HIGHLANDS
+            600 175 GAMBURTSEV
             600 155 SUBGLACIAL
             600 135 MOUNTAINS
 EOF
