@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os 
+import io
 import pygmt
 import xarray as xr
 from PIL import Image
@@ -27,30 +28,32 @@ def read_nc(path,pst,x0=0,x1=0):
     data = ds.groups["channels"].variables["normalized_max_in_bin"][:]  # Shape (aperture, fast_time, direction)
     ds.close()
 
-# Normalize the data for RGB - controls contrast
-    data = data - (np.min(data) + 0.4)
-    data = 3 * data / np.max(data)
-    data = np.clip(data,a_min=0, a_max=1)
-    data = (data * 255).astype(np.uint8)
 
 # Extract the three directions as RGB channels
-    r = data[:, :, 0]  # Red channel
-    g = data[:, :, 1]  # Green channel
+    r = ((data[:, :, 0] + data[:, :, 1]))/2 # Red channel
+    g = r  # Green channel
     b = data[:, :, 2]  # Blue channel
+
 
 # Stack into an RGB image (PyGMT expects a grid, so we reshape as needed)
     rgb = np.stack([r, g, b], axis=-1)  # Shape (aperture, fast_time, 3)
 
+# Normalize the data for RGB - controls contrast
+    rgb = rgb / 20 
+    rgb = np.clip(rgb, a_min=0, a_max=1)
+    rgb = (rgb * 255).astype('uint8')
+
 # Convert to xarray DataArray for PyGMT compatibility
     rgb_xr = xr.DataArray(np.transpose(rgb), dims=["band","y", "x"])
 
-    distance = np.arange(0,apertures,1)
+    distance = np.arange(0,apertures,1)/20
 
     if x0 > x1:
         distance = distance[::-1] + min([x0,x1])
         rgb_xr[:,:,::-1]
     else:
         distance = distance + min([x0,x1])
+    print(distance)
 
     #rgb_xr = rgb_xr.copy().assign_coords({"y": (0.2*np.flipud(fast_time))})
     rgb_xr.coords["y"] = ("y", 1e6 * fast_time/2)
@@ -99,33 +102,34 @@ def read_radargram(path,transect):
 def get_bounds(line,length=45):
 
     mapping={
-        'R60': 820,
-        'R62': 820,
-        'R64': 805,
-        'R66': 790,
-        'R68': 775,
-        'R69': 767,
-        'R70': 760,
-        'R71': 753,
-        'R72': 745,
-        'R73': 750,
-        'R74': 755,
-        'R75': 755,
-        'R76': 755,
-        'R77': 745,
-        'R78': 745,
-        'R79': 745,
-        'R80': 745
+        'R60': (820,0),
+        'R62': (820,0),
+        'R64': (805,0),
+        'R66': (790,0),
+        'R68': (775,773),
+        'R69': (767,760),
+        'R70': (760,765),
+        'R71': (753,0),
+        'R72': (745,0),
+        'R73': (750,0),
+        'R74': (755,0),
+        'R75': (755,755),
+        'R76': (755,0),
+        'R77': (745,0),
+        'R78': (745,0),
+        'R79': (745,0),
+        'R80': (745,0)
     }
     
-    for t in mapping:
+    for t in mapping.keys():
         if t in line:
             print(line)
-            center =  mapping[t]
+            center =  mapping[t][0]
             x0 = center - length/2
             x1 = center + length/2
-            return x0, x1
-    return None, None
+            bnd = mapping[t][1]
+            return x0, x1, bnd
+    return None, None, None
 
 
 def plot(targ=os.getcwd().replace('code','targ'),orig=os.getcwd().replace('code','orig')):
@@ -138,7 +142,7 @@ def plot(targ=os.getcwd().replace('code','targ'),orig=os.getcwd().replace('code'
 
     os.makedirs(targ,exist_ok=True)
 
-    pygmt.config(MAP_FRAME_TYPE='plain',FONT_ANNOT_PRIMARY='8p',FONT_LABEL='8p')
+    pygmt.config(MAP_FRAME_TYPE='plain',FONT_ANNOT_PRIMARY='8p',FONT_LABEL='8p',PS_LINE_JOIN='round')
     fig = pygmt.Figure()
 
     z0=-1000
@@ -168,6 +172,37 @@ def plot(targ=os.getcwd().replace('code','targ'),orig=os.getcwd().replace('code'
     spec['distance'] = np.sqrt((spec['x'] - origin_x)**2 + (spec['y'] - origin_y)**2)/1000
     df = spec[['x','y','distance']]
 
+
+# plot Delay Doppler profile
+    #fig.grdimage(dd,region=[740,840,30,55],projection=f'X{width}i/-{height*2}i')
+
+    region=[550,850,10,55]
+
+    fig.basemap(region=region,projection=f'X{width}i/-{height*2}i',frame=['af','WSne','y+ldelay (µsec)'])
+
+    fig.plot(x=region[0],y=region[2]-10,direction=[0,10],style='v0.4i+e+h0+a30+gdodgerblue+p1p,dodgerblue',no_clip=True,pen='8p,dodgerblue')
+    fig.text(x=region[0],y=region[2]-10,text='Ice Flow direction',font='6p,Helvetica-Bold,white',no_clip=True,justify='MR',offset='j1i')
+
+    fig.plot(x=region[0],y=region[2],style='s0.25c',pen='0.5p,black',fill='blue',label='Specular echoes')
+    fig.plot(x=region[0],y=region[2],style='s0.25c',pen='0.5p,black',fill='yellow',label='Scattered echoes')
+    fig.plot(x=region[0],y=region[2],style='s0.25c',pen='0.5p,black',fill='gray',label='Mixed echoes')
+    fig.grdimage(dd)
+
+    fig.plot(x=[784,784],y=[20,40],pen='1p,ivory,dotted')
+    fig.text(x=784,y=20,text='dichotomy',justify='TL',offset='j0.1c',font='6p,Helvetica-Bold,ivory')
+    fig.text(x=660,y=35,text='basal unit',justify='BR',offset='j0.3c+v0.25p,ivory',font='6p,Helvetica-Bold,ivory')
+    fig.text(x=785,y=52,text='cuesta',justify='TC',offset='j0.01c+v0.25p,ivory',font='6p,Helvetica-Bold,ivory')
+    fig.text(x=810,y=48,text='Elbow Complex',justify='BC',offset='j0.4c+v0.25p,ivory',font='6p,Helvetica-Bold,ivory')
+
+    fig.plot(x=spec['distance'],y=spec['base_specular[s]']*1e6,pen='1p,white,dotted')
+    fig.text(position='TL',justify='TL',fill='white',pen='0.25p,black',clearance='+tO',offset='J0.1c',text=f'a) {dd_transect} Delay Doppler color composite',font='8p,black')
+
+    pygmt.config(FONT_ANNOT_PRIMARY='6p,black')
+    fig.legend(position=f'jTR')
+    pygmt.config(FONT_ANNOT_PRIMARY='8p,Helvetica,black')
+
+    fig.shift_origin(yshift=f'{-(2*height+height/2)}i')
+
 # Plot fractional layer depth profile
     region_layers = [ 667, 867, 15, 85 ] 
     text_x = 800
@@ -185,26 +220,15 @@ def plot(targ=os.getcwd().replace('code','targ'),orig=os.getcwd().replace('code'
     text_y = ea_h3[ea_h3['Distance'] < text_x]['fraction_depth'].iloc[0] * 100
     fig.text(x=text_x,y=text_y,justify='CM',fill='white',pen='0.25p,lightblue',clearance='+tO',text='H3 (162 ka) horizon',font='6p,lightblue')
 
-    fig.text(position='TL',justify='TL',fill='white',pen='0.25p,black',clearance='+tO',offset='J0.1c',text=f'a) AGAP Flight {bas_flight} Horizon Fractional Depth',font='8p,black')
+    fig.text(position='TL',justify='TL',fill='white',pen='0.25p,black',clearance='+tO',offset='J0.1c',text=f'b) AGAP Flight {bas_flight} Horizon Fractional Depth',font='8p,black')
     fig.basemap(frame=['WSne','af','y+l% depth'])
 
-    fig.shift_origin(yshift=f'{-(2*height+height/2)}i')
-
-# plot Delay Doppler profile
-    fig.grdimage(dd,region=[740,840,30,55],projection=f'X{width}i/-{height*2}i')
-    fig.plot(x=spec['distance'],y=spec['base_specular[s]']*1e6,pen='1p,white,dotted')
-    fig.basemap(frame=['af','WSne','y+ldelay (µsec)'])
-    fig.text(position='TL',justify='TL',fill='white',pen='0.25p,black',clearance='+tO',offset='J0.1c',text=f'b) {dd_transect} Delay Doppler color composite',font='8p,black')
-    fig.text(position='BL',justify='BL',offset='J0.1c',text=f',                               Mixed/Scattering',font='6p,Courier-Bold,lightgray',fill='dimgray')
-    fig.text(position='BL',justify='BL',offset='J0.1c',text=f'                      From Left',font='6p,Courier-Bold,green',fill='dimgray')
-    fig.text(position='BL',justify='BL',offset='J0.1c',text=f'           From Below',font='6p,Courier-Bold,blue',fill='dimgray')
-    fig.text(position='BL',justify='BL',offset='J0.1c',text=f'From Right',font='6p,Courier-Bold,red',fill='dimgray')
 
 # plot radargrams
     fig.shift_origin(yshift=f'{-(1.5*height+height/2)}i')
     for i,line in enumerate(lines):
         labels = ['c','d','e']
-        x0, x1 = get_bounds(line)
+        x0, x1, bnd = get_bounds(line)
         region=[x0,x1,z0,z1]
 
         fig.basemap(frame=['tblr'], region=region, projection=f'X{width}i/{1.5*height}i')
@@ -223,9 +247,14 @@ def plot(targ=os.getcwd().replace('code','targ'),orig=os.getcwd().replace('code'
 
         fig.text(position='TL',text=f'{labels[i]}) {line}',justify='TL',font='8p,black',fill='white',pen='0.25p,black',offset='J0.1c')
         fig.text(position='BR',text=f'{aspect:.1f}x vertical exageration',justify='BR',font='8p,gray',offset='J0.1c')
+        
+        if bnd:
+            fig.plot(x=[bnd,bnd],y=[-200,450],pen='1p,ivory,dotted')
+            fig.text(x=bnd,y=450,text='dichotomy',justify='TL',offset='j0.1c',font='6p,Helvetica-Bold,ivory')
 
         if i == 1:
             fig.basemap(frame=['WSne','xaf','ya500f+lWGS-84 Elevation (m)'])
+            fig.text(x=775,y=-750,text='lineations',justify='BC',offset='j0.4c+v0.25p,ivory',font='6p,Helvetica-Bold,ivory')
         else:
             fig.basemap(frame=['WSne','xaf','ya500f'])
 
