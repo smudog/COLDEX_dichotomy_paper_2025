@@ -239,20 +239,20 @@ gmt begin $TARG/coldex_overview_maps png
             600 135 MOUNTAINS
 EOF
 
-    gmt text $REGION_KM -F+f6p,Palatino-BoldItalic,white+jBC -C25%+tO -t25 -Gwhite < big_places.txt
-    gmt text $REGION_KM -F+f6p,Palatino-BoldItalic,black+jBC < big_places.txt
+    gmt text $REGION_KM -F+f6p,Palatino-Bold,white+jBC -C25%+tO -t25 -Gwhite < big_places.txt
+    gmt text $REGION_KM -F+f6p,Palatino-Bold,black+jBC < big_places.txt
 
             cat <<-EOF > small_places.txt 
             234 -15 TL The 'Elbow' 
             354 123  TL The 'Platter' 
             87 0 BC The 'Breaches'
             140 -100 ML Jordan et al. (2018) anomaly
-            0 0 TC South Pole
+            0 0 TL South Pole
 EOF
 
 echo plotting smalls 
-    gmt text $REGION_KM -F+f6p,Palatino-BoldItalic,black+j  -Dj0.3c -C25%+tO -t25 -Gwhite < small_places.txt
-    gmt text $REGION_KM -F+f6p,Palatino-BoldItalic,black+j -Dj0.3c+v1p < small_places.txt
+    gmt text $REGION_KM -F+f6p,Palatino-Bold,black+j  -Dj0.3c -C25%+tO -t25 -Gwhite < small_places.txt
+    gmt text $REGION_KM -F+f6p,Palatino-Bold,black+j -Dj0.3c+v1p < small_places.txt
 
 echo 0 0 | gmt psxy -St0.25c -Gblack 
 
