@@ -12,6 +12,7 @@ import pandas as pd
 import re
 from netCDF4 import Dataset
 from h5py import File
+from matplotlib import pyplot as plt
 
 
 def read_grd(path):
@@ -19,7 +20,7 @@ def read_grd(path):
     raster = rxa.open_rasterio(path)
     return raster.sel(band=1)
 
-def read_nc(path,pst,x0=0,x1=0):
+def read_nc(path,pst,x0=0,x1=0,increment=20,scale=20):
     ds = Dataset(os.path.join(path,f'{pst.replace("/","_")}_dd_analysis.nc'),'r',format="NETCDF4")
     fast_time = ds['channels'].variables['fast_time'][:]
     apertures = ds['channels'].variables['normalized_max_in_bin'].shape[0]
@@ -39,21 +40,20 @@ def read_nc(path,pst,x0=0,x1=0):
     rgb = np.stack([r, g, b], axis=-1)  # Shape (aperture, fast_time, 3)
 
 # Normalize the data for RGB - controls contrast
-    rgb = rgb / 20 
+    rgb = rgb / scale
     rgb = np.clip(rgb, a_min=0, a_max=1)
     rgb = (rgb * 255).astype('uint8')
 
 # Convert to xarray DataArray for PyGMT compatibility
     rgb_xr = xr.DataArray(np.transpose(rgb), dims=["band","y", "x"])
 
-    distance = np.arange(0,apertures,1)/20
+    distance = np.arange(0,apertures,1)*(increment/1000)
 
     if x0 > x1:
         distance = distance[::-1] + min([x0,x1])
         rgb_xr[:,:,::-1]
     else:
         distance = distance + min([x0,x1])
-    print(distance)
 
     #rgb_xr = rgb_xr.copy().assign_coords({"y": (0.2*np.flipud(fast_time))})
     rgb_xr.coords["y"] = ("y", 1e6 * fast_time/2)
@@ -151,7 +151,6 @@ def plot(targ=os.getcwd().replace('code','targ'),orig=os.getcwd().replace('code'
     height=0.44
     #height=0.66
     width=-4
-    pygmt.makecpt(cmap='gray',series='-135/-100/5',continuous=True)
 
 # Make fractional layer depth profile
     sanderson_path = os.path.join(orig,'Sanderson_2023')
@@ -167,7 +166,7 @@ def plot(targ=os.getcwd().replace('code','targ'),orig=os.getcwd().replace('code'
     data, bounds, xyd = read_radargram(os.path.join(orig,'projected_images_COLDEX'),dd_transect)
 
     DelayDoppler_path=os.path.join(orig,'DelayDoppler')
-    dd = read_nc(DelayDoppler_path,dd_full_transect,x0=bounds[0],x1=bounds[1])
+    dd = read_nc(DelayDoppler_path,dd_full_transect,x0=bounds[0],x1=bounds[1],scale=15)
     spec = pd.read_csv(os.path.join(DelayDoppler_path,f'{dd_full_transect}_specularity.gmt'),sep='\t')
     spec['distance'] = np.sqrt((spec['x'] - origin_x)**2 + (spec['y'] - origin_y)**2)/1000
     df = spec[['x','y','distance']]
@@ -176,7 +175,7 @@ def plot(targ=os.getcwd().replace('code','targ'),orig=os.getcwd().replace('code'
 # plot Delay Doppler profile
     #fig.grdimage(dd,region=[740,840,30,55],projection=f'X{width}i/-{height*2}i')
 
-    region=[550,850,10,55]
+    region=[550,850,25,55]
 
     fig.basemap(region=region,projection=f'X{width}i/-{height*2}i',frame=['af','WSne','y+ldelay (µsec)'])
 
@@ -185,16 +184,17 @@ def plot(targ=os.getcwd().replace('code','targ'),orig=os.getcwd().replace('code'
 
     fig.plot(x=region[0],y=region[2],style='s0.25c',pen='0.5p,black',fill='blue',label='Specular echoes')
     fig.plot(x=region[0],y=region[2],style='s0.25c',pen='0.5p,black',fill='yellow',label='Scattered echoes')
-    fig.plot(x=region[0],y=region[2],style='s0.25c',pen='0.5p,black',fill='gray',label='Mixed echoes')
+
     fig.grdimage(dd)
 
-    fig.plot(x=[784,784],y=[20,40],pen='1p,ivory,dotted')
-    fig.text(x=784,y=20,text='dichotomy',justify='TL',offset='j0.1c',font='6p,Helvetica-Bold,ivory')
-    fig.text(x=660,y=35,text='basal unit',justify='BR',offset='j0.3c+v0.25p,ivory',font='6p,Helvetica-Bold,ivory')
-    fig.text(x=785,y=52,text='cuesta',justify='TC',offset='j0.01c+v0.25p,ivory',font='6p,Helvetica-Bold,ivory')
-    fig.text(x=810,y=48,text='Elbow Complex',justify='BC',offset='j0.4c+v0.25p,ivory',font='6p,Helvetica-Bold,ivory')
+    fig.plot(x=[784,784],y=[30,45],pen='1p,ivory,dotted')
+    fig.text(x=784,y=30,text='dichotomy',justify='TL',offset='j0.1c',font='6p,Helvetica-Bold,ivory')
 
-    fig.plot(x=spec['distance'],y=spec['base_specular[s]']*1e6,pen='1p,white,dotted')
+    fig.text(x=660,y=35,text='basal unit',justify='BC',offset='j0.35c+v0.25p,ivory',font='6p,Helvetica-Bold,ivory')
+    fig.text(x=790,y=49,text='cuesta',justify='TC',offset='j0.15c+v0.25p,ivory',font='6p,Helvetica-Bold,ivory')
+    fig.text(x=820,y=48.5,text='Elbow Complex',justify='BC',offset='j0.15c+v0.25p,ivory',font='6p,Helvetica-Bold,ivory')
+
+    fig.plot(x=spec['distance'],y=spec['base_specular[s]']*1e6,pen='0.25p,white,dashed')
     fig.text(position='TL',justify='TL',fill='white',pen='0.25p,black',clearance='+tO',offset='J0.1c',text=f'a) {dd_transect} Delay Doppler color composite',font='8p,black')
 
     pygmt.config(FONT_ANNOT_PRIMARY='6p,black')
@@ -220,11 +220,15 @@ def plot(targ=os.getcwd().replace('code','targ'),orig=os.getcwd().replace('code'
     text_y = ea_h3[ea_h3['Distance'] < text_x]['fraction_depth'].iloc[0] * 100
     fig.text(x=text_x,y=text_y,justify='CM',fill='white',pen='0.25p,lightblue',clearance='+tO',text='H3 (162 ka) horizon',font='6p,lightblue')
 
+    fig.plot(x=[760,760],y=[70,35],pen='1p,darkyellow,dotted')
+    fig.text(x=760,y=40,text='dichotomy',justify='ML',offset='j0.1c',font='6p,Helvetica-Bold,darkyellow')
+
     fig.text(position='TL',justify='TL',fill='white',pen='0.25p,black',clearance='+tO',offset='J0.1c',text=f'b) AGAP Flight {bas_flight} Horizon Fractional Depth',font='8p,black')
     fig.basemap(frame=['WSne','af','y+l% depth'])
 
 
 # plot radargrams
+    pygmt.makecpt(cmap='gray',series='-135/-100/5',continuous=True)
     fig.shift_origin(yshift=f'{-(1.5*height+height/2)}i')
     for i,line in enumerate(lines):
         labels = ['c','d','e']
@@ -245,7 +249,7 @@ def plot(targ=os.getcwd().replace('code','targ'),orig=os.getcwd().replace('code'
         x = 1000*(x1-x0)
         aspect = abs(1.5*height/z)/abs(width/x)
 
-        fig.text(position='TL',text=f'{labels[i]}) {line}',justify='TL',font='8p,black',fill='white',pen='0.25p,black',offset='J0.1c')
+        fig.text(position='TL',text=f'{labels[i]}) {line}',justify='TL',clearance='+tO',font='8p,black',fill='white',pen='0.25p,black',offset='J0.1c')
         fig.text(position='BR',text=f'{aspect:.1f}x vertical exageration',justify='BR',font='8p,gray',offset='J0.1c')
         
         if bnd:
