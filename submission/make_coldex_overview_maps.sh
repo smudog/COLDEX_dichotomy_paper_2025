@@ -92,7 +92,7 @@ gmt grdgradient $srf -D -S$TARG/srfgrad.grd -G$TARG/srfslopedirection.grd
 
 echo Plotting Supplementary Figure 2
 gmt begin $TARG/coldex_south_pole_basin_maps png 
-    gmt subplot begin 2x2 -Fs$WIDTH $REGION_M -JX$WIDTH/0 -M0c
+    gmt subplot begin 2x2 -Fs$WIDTH $REGION_M -JX$WIDTH/0 -M0c/0.5c  #-Cn1p
     echo Plotting surface slope
         gmt subplot set
             gmt makecpt -T-0.001/0.005/0.0001 -Cocean -I
@@ -100,15 +100,16 @@ gmt begin $TARG/coldex_south_pole_basin_maps png
             gmt grdcontour $srf -C5 -Wc0.25p,white -Wa0.5p,white -A25+f6p -T 
             gmt plot $bnd -W3p,black -t50  
             gmt colorbar -C \
-                        -DJLM+o0.75c/0 \
+                        -DJTC+o0/0.25c \
                         -Bxa -By+l"gradient"
+                        #-DJTC+o0.75c/0 \
 
-            gmt basemap -Bxfa -Byfa -BwSne $REGION_KM
+            gmt basemap -Bxfa -Byfa+l"Northings (km)" -BWSne $REGION_KM
 
             profiles
 
             cat $hipass \
-               | gmt wiggle $REGION_M -Z1000c -DjBR+o0.25c/0.25c+w250+lm -gd1000 -Gyellow+p -F+gwhite --FONT_ANNOT_PRIMARY=8p 
+               | gmt wiggle $REGION_M -Z1000c -DjBL+o0.25c/0.25c+w250+l"m (high pass bed scale)" -gd1000 -Gyellow+p -F+gwhite --FONT_ANNOT_PRIMARY=8p 
 
             gmt text $REGION_KM -F+f8p+jLT -D0.2c/-0.2c -W -Gwhite <<- EOF
             ${X_W} ${Y_N} (a) Surface gradient and elevation contours
@@ -124,7 +125,7 @@ EOF
 
             gmt basemap -JX$WIDTH/0 \
                          -Bxfa -Byfa \
-                         -BWeSn $REGION_KM
+                         -BweSn $REGION_KM
             profiles
 
             cat $hipass \
@@ -134,7 +135,7 @@ EOF
             ${X_W} ${Y_N} (b) Bed elevation grid
 EOF
             gmt colorbar -C \
-                        -DJRM+o0.75c/0 \
+                        -DJTC+o0/0.25c \
                         -Bxa -By+l"m" \
 
         echo doing basal ice
@@ -144,10 +145,10 @@ EOF
             gmt grdcontour $srf -C5 -Wc0.25p,white -Wa0.5p,white -A25+f6p -T 
             gmt plot $bnd -W3p,black -t50  
             gmt colorbar -C \
-                        -DJLM+o0.75c/0 \
+                        -DJBC+o0/0.25c \
                         -Bxa -By+l"%"
 
-            gmt basemap -Bxfa -Byfa -BwSnE $REGION_KM
+            gmt basemap -Bxfa+l"Eastings (km)" -Byfa+l"Northings (km)" -BWNse $REGION_KM
             gmt text $REGION_KM -F+f8p+jLT -D0.2c/-0.2c -W -Gwhite <<- EOF  
             ${X_W} ${Y_N} (c) Basal Ice Unit Fractional Thickness 
 EOF
@@ -159,10 +160,10 @@ EOF
             gmt grdcontour $srf -C5 -Wc0.5p,white -Wa0.5p,white -A25+f6p -T 
             gmt plot $bnd -W3p,black -t50  
             gmt colorbar -C \
-                        -DJRM+o0.75c/0 \
+                        -DJBC+o0/0.25c \
                         -Bxa -By+l"m"
 
-            gmt basemap -Bxfa -Byfa -BwSne $REGION_KM
+            gmt basemap -Bxfa+l"Eastings (km)" -Byfa -BwsNe $REGION_KM
             gmt text $REGION_KM -F+f8p+jLT -D0.2c/-0.2c -W -Gwhite <<- EOF
 ${X_W} ${Y_N} (d) RMS roughness at 400 m 
 EOF
