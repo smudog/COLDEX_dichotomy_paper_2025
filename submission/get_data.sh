@@ -56,4 +56,15 @@ mv UTIG_1999_SOAR-LVS-WLK_AIR_BM2.csv* UTIG_1999_SOAR-LVS-WLK_AIR_BM2.csv
 mv NASA_2018_ICEBRIDGE_AIR_BM3.csv* NASA_2018_ICEBRIDGE_AIR_BM3.csv
 mv NASA_2016_ICEBRIDGE_AIR_BM3.csv* NASA_2016_ICEBRIDGE_AIR_BM3.csv
 
+#icesat
+ATL14_A1=https://data.nsidc.earthdatacloud.nasa.gov/nsidc-cumulus-prod-protected/ATLAS/ATL14/004/ATL14_A1_0325_100m_004_05.nc
+ATL14_A2=https://data.nsidc.earthdatacloud.nasa.gov/nsidc-cumulus-prod-protected/ATLAS/ATL14/004/ATL14_A2_0325_100m_004_05.nc
+ATL14_A3=https://data.nsidc.earthdatacloud.nasa.gov/nsidc-cumulus-prod-protected/ATLAS/ATL14/004/ATL14_A3_0325_100m_004_05.nc
+ATL14_A4=https://data.nsidc.earthdatacloud.nasa.gov/nsidc-cumulus-prod-protected/ATLAS/ATL14/004/ATL14_A4_0325_100m_004_05.nc
+
+wget $ATL14_A1
+wget $ATL14_A2
+wget $ATL14_A3
+wget $ATL14_A4
+
 echo SPICECAP data cannot be automatically downloaded, it is located at the USAP Data Center at https://doi.org/10.15784/601437
