@@ -16,12 +16,14 @@ fi
 
 #Getting pointers to original data
 #srf=$TARG/srfelv.xyz_val.grd
-srf=$ORIG/rema/rema_mosaic_1km_v2.0_filled_cop30_dem.tif
+#srf=$ORIG/rema/rema_mosaic_1km_v2.0_filled_cop30_dem.tif
+srf=$TARG/srfelv.xyz_val.tif
 vel=$TARG/Mouginot2019
 sanderson=$ORIG/Sanderson_2023/EA_H3_162ka.csv
 bnd=$ORIG/clipped_bnd.gmt
 data=$ORIG/projected_images_COLDEX
 bed=$TARG/bedelv.xyz_val.tif
+thk=$TARG/icethk.xyz_val.tif
 spec=$TARG/specularity_content.xyz_val.tif
 basal=$TARG/fract_basal_ice_percent.tif
 rmsd=$TARG/roughness.xyz_val.tif
@@ -88,6 +90,13 @@ function profiles () {
 #Generated new datasets from original data
 echo Generated surface slope
 gmt grdgradient $srf -D -S$TARG/srfgrad.grd -G$TARG/srfslopedirection.grd
+#gmt grdedit $TARG/srfgrad.grd -Ev
+echo "gmt grdmath $thk 9.8 MUL 917 MUL $TARG/srfgrad.grd MUL 1000 DIV = $TARG/tau.grd "
+gmt grdmath $thk 9.8 MUL 917 MUL $TARG/srfgrad.grd MUL 1000 DIV = $TARG/tau.grd 
+gmt grdinfo $TARG/tau.grd
+gmt grdfilter $TARG/tau.grd -Fc30e3 -D0 -G$TARG/tau.fil.grd
+gmt grdinfo $TARG/srfgrad.grd
+gmt grdinfo $thk
 
 
 echo Plotting Supplementary Figure 2
@@ -95,13 +104,16 @@ gmt begin $TARG/coldex_south_pole_basin_maps png
     gmt subplot begin 2x2 -Fs$WIDTH $REGION_M -JX$WIDTH/0 -M0c/0.5c  #-Cn1p
     echo Plotting surface slope
         gmt subplot set
-            gmt makecpt -T-0.001/0.005/0.0001 -Cocean -I
-            gmt grdimage $TARG/srfgrad.grd -Bbtlr -C
+            gmt makecpt -T0/100/10 -Cdevon -Z -I
+            #gmt makecpt -T-0.001/0.005/0.0001 -Cocean -I
+            #gmt grdimage $TARG/srfgrad.grd -Bbtlr -C
+            gmt grdimage $TARG/tau.fil.grd -Bbtlr -C
             gmt grdcontour $srf -C5 -Wc0.25p,white -Wa0.5p,white -A25+f6p -T 
             gmt plot $bnd -W3p,black -t50  
             gmt colorbar -C \
                         -DJTC+o0/0.25c \
-                        -Bxa -By+l"gradient"
+                        -Bxa -By+l"kPa"
+                        #-Bxa -By+l"gradient"
                         #-DJTC+o0.75c/0 \
 
             gmt basemap -Bxfa -Byfa+l"Northings (km)" -BWSne $REGION_KM
@@ -112,7 +124,7 @@ gmt begin $TARG/coldex_south_pole_basin_maps png
                | gmt wiggle $REGION_M -Z1000c -DjBL+o0.25c/0.25c+w250+l"m (high pass bed scale)" -gd1000 -Gyellow+p -F+gwhite --FONT_ANNOT_PRIMARY=8p 
 
             gmt text $REGION_KM -F+f8p+jLT -D0.2c/-0.2c -W -Gwhite <<- EOF
-            ${X_W} ${Y_N} (a) Surface gradient and elevation contours
+            ${X_W} ${Y_N} (a) Driving stress and elevation contours
 EOF
 
         echo doing bedelv

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-'''Script for generating ice thickness and bed elevation grids
+'''Script for generating ice thickness, bed elevation and related grids
 
 Code is assumed to be in a directory called 'code'
 Downloaded data is assumed to be in a parallel directory called 'orig'
@@ -21,6 +21,7 @@ import pandas as pd
 import numpy as np
 import time
 from datetime import datetime, timezone
+from process_dem import compile_srf
 
 def read_opr(path, roughness_interval=400, epsg=3031):
     '''reads data as formated at the Open Polar Radar website
@@ -107,9 +108,8 @@ def read_bedmap(path, roughness_interval=400, epsg=3031):
     return data[['X','Y','BED','THICK',f'RMSD_{roughness_interval}']]
 
 def get_roughness(data, sample_interval=400):
+    '''Calculates the RMS height between <sample_interval> distances'''
     start_time = time.time()
-
-    #data.reset_index(inplace=True)
 
     data['GAPS'] = np.sqrt((data['X'].diff().fillna(0)**2) + (data['Y'].diff().fillna(0)**2))
     data['DISTANCE'] = data['GAPS'].cumsum()
@@ -118,33 +118,6 @@ def get_roughness(data, sample_interval=400):
 
     new_distances = np.arange(0,max_distance,sample_interval)
 
- #   in_gap = np.zeros_like(new_distances, dtype=bool)
-
-    # Identify where the gap exceeds threshold
- #   large_gaps = data[data['GAPS'] > max_gap]
-
-#    print('Create gap intervals')
-#    print(time.time() - start_time)
-#    gap_intervals = pd.IntervalIndex.from_tuples([
-#        (data.loc[idx - 1, 'DISTANCE'], data.loc[idx, 'DISTANCE'])
-#        for idx in large_gaps.index
-#    ])
-
-#    print(len(gap_intervals))
-#    print('Apply gaps in a vectorized way')
-#    print(time.time() - start_time)
-#    for interval in gap_intervals:
-#        in_gap[(new_distances > interval.left) & (new_distances < interval.right)] = True
-
-#    print('Interpolating bed elevation data') 
-#    print(time.time() - start_time)
-
-    # Vectorized mask for interpolated data
-#    interpolated_data = pd.DataFrame({
-#        'DISTANCE': new_distances
-#    })
-
-    # interpolation
     interpolated_bed = np.interp(
         new_distances, 
         data['DISTANCE'],
@@ -160,39 +133,6 @@ def get_roughness(data, sample_interval=400):
         new_distances, 
         interpolated_rmsd  
     )
-
-    #interpolated_x = np.interp(
-    #    new_distances, 
-    #    data['DISTANCE'], 
-    #    data['X'] 
-    #)
-
-    #interpolated_y = np.interp(
-    #    new_distances, 
-    #    data['DISTANCE'], 
-    #    data['Y'] 
-    #)
-
-    #interpolated_data = pd.DataFrame({
-    #'DISTANCE': new_distances,
-    #'X': interpolated_x,
-    #'Y': interpolated_y,
-    #'BED': interpolated_bed,
-    #})
-
-    # Check if distances fall into any gap interval
-    #in_gap = interpolated_data['DISTANCE'].apply(lambda x: gap_intervals.contains(x))
-#    in_gap = gap_intervals.contains(pd.Series(interpolated_data['DISTANCE'].values)).any(level=0)
-
-    #print('filtering data gaps') 
-    #print(time.time() - start_time)
-    ## Set values within large gaps to NaN
-    #interpolated_data['BED'] = np.where(in_gap, np.nan, interpolated_bed)
-    #interpolated_data['X'] = np.where(in_gap, np.nan, interpolated_x)
-    #interpolated_data['Y'] = np.where(in_gap, np.nan, interpolated_y)
-
-    #interpolated_data['RMSD'] = np.abs(interpolated_data['BED'].diff())
-    #print(time.time() - start_time)
     return rmsd 
     
 
@@ -211,8 +151,8 @@ def bin_and_grid(data,
     arguments:
         data: pandas dataframe with x, y, and data values
         name: name of output grid
-        z: the dataframe column to use for the gridded data value
         region: array with projected coordinates with x_min, x_max, y_min, y_max
+        z: the dataframe column to use for the gridded data value
         blockspacing: the size of the bins used to reduce the input data in projected units
         grdspacing: the size of final gridded cells in projected units
         maxradius: how far from datapoints interpolated values are permitted in projected units
@@ -330,6 +270,7 @@ def nnbathy(data,region,spacing):
         print("nnbathy executable not found. Ensure it's in your PATH.")     
 
 def read_radials():
+    '''Obtain information on which times correspond to radials from transect name'''
     orig=os.getcwd().replace('code','orig')
     metadata_path = os.path.join(orig,'projected_images_COLDEX/metadata')
     limits={}
@@ -345,6 +286,7 @@ def read_radials():
     return limits
 
 def get_radials(all_mkb=None):
+    '''Read in only radial transects'''
     limits = read_radials()
     radials=[]
     for radial in limits.keys():
@@ -353,6 +295,7 @@ def get_radials(all_mkb=None):
     return pd.concat(radials)
 
 def read_and_process_data(region,blockspacing=2.5e3,roughness_interval=400):
+    '''Process all data'''
     targ=os.getcwd().replace('code','targ')
     os.makedirs(targ,exist_ok=True)
 
@@ -396,14 +339,21 @@ def read_and_process_data(region,blockspacing=2.5e3,roughness_interval=400):
     all_thk = pd.concat(thk)
     all_mkb = pd.concat(mkb)
 
+    srf = compile_srf(region=region)
     #rms = get_roughness(all_thk)
 
     grids = {}
 
+
     grids['roughness'] = bin_and_grid(all_thk,'roughness',region=region,z=f'RMSD_{roughness_interval}',blockspacing=5e3,grdspacing=1e3,maxradius=8e3,filter=10e3)
     grids['icethk'] = bin_and_grid(all_thk,'icethk',region=region,z='THICK',blockspacing=5e3,grdspacing=1e3,maxradius=8e3,filter=10e3)
     grids['bedelv'] = bin_and_grid(all_thk,'bedelv',region=region,z='BED',blockspacing=5e3,grdspacing=1e3,maxradius=8e3,filter=10e3)
+    grids['srfelv'] = bin_and_grid(srf,'srfelv',region=region,z='z',blockspacing=5e3,grdspacing=1e3,maxradius=8e3,filter=5e3)
 
+    print(pygmt.grdinfo(grids['srfelv']))
+    print(pygmt.grdinfo(grids['bedelv']))
+
+    
     try:
         basal_df = pd.read_csv(os.path.join(orig,'yan_basal_layer','cxa_bil_thickness.csv'))
         basal_df['X'] = basal_df['x']
@@ -433,10 +383,14 @@ def read_and_process_data(region,blockspacing=2.5e3,roughness_interval=400):
     plot(grid=grids['bedelv'],name='Bed Elevation',cmap='globe',series=[-2500,2500,100])
     plot(grid=grids['spec'],name='Specularity Content',cmap='ocean',series=[0,0.5,0.1],shade=False)
     plot(grid=grids['roughness'],name='RMS Roughness @ 400 m',cmap='magma',series=[0,50,1],shade=False)
+    plot(grid=grids['srfelv'],name='Surface Elevation',cmap='viridis',series=[2000,4000,10],shade=True)
                 
 
-read_and_process_data([-200e3,800e3,-200e3,400e3])
+def main():
+    read_and_process_data([-200e3,800e3,-200e3,400e3])
 
+if __name__ == "__main__":
+    main()
 
         
 
