@@ -239,18 +239,21 @@ gmt begin $TARG/coldex_overview_maps png
             profiles
             
             cat <<-EOF > big_places.txt
-            275 30 SOUTH POLE
-            275 10 BASIN
-            75 145 PENSACOLA 
-            75 125 SUBGLACIAL
-            75 105 BASIN
-            170 210 RECOVERY
+            275 30 \`SOUTH POLE
+            275 10 BASIN'
+            170 210 \`RECOVERY
             170 190 SUBGLACIAL
-            170 170 HIGHLANDS
+            170 170 HIGHLANDS'
             600 175 GAMBURTSEV
             600 155 SUBGLACIAL
             600 135 MOUNTAINS
+            510 -160 POLAR
+            510 -180 SUBGLACIAL
+            510 -210 BASIN
 EOF
+            #75 145 PENSACOLA 
+            #75 125 POLE
+            #75 105 BASIN
 
     gmt text $REGION_KM -F+f6p,Palatino-Bold,white+jBC -C25%+tO -t25 -Gwhite < big_places.txt
     gmt text $REGION_KM -F+f6p,Palatino-Bold,black+jBC < big_places.txt
