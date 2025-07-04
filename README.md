@@ -1,4 +1,4 @@
-# Scripts supporting "Dome A basal ice truncated at an extensive geologic dichotomy in the South Pole Basin of East Antarctica"
+# Scripts supporting "Coupled ice sheet structure and bedrock geology in the deep interior of East Antarctica: Results from Dome A and the South Pole Basin"
 
 ## Introduction
 These scripts are intented to support a paper on airborne results over the South Pole Basin conducted by the National Science Foundations Center for Oldest Ice Exploration (NSF COLDEX).
